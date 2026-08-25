@@ -47,8 +47,8 @@ export interface AppCommandTarget {
   openViaDialog(): void;
   openFile(path: string): void;
   repeatLastFile(): void;
-  opacityUp(): void;
-  opacityDown(): void;
+  transparencyUp(): void;
+  transparencyDown(): void;
   toggleAutoScroll(): void;
   setAutoScrollSpeed(speed: AutoScrollSpeed): void;
   toggleClickThrough(): void;
@@ -73,9 +73,9 @@ export function executeCommand(app: AppCommandTarget, command: AppCommand): void
     case 'repeat-last-file':
       return app.repeatLastFile();
     case 'opacity-up':
-      return app.opacityUp();
+      return app.transparencyUp();
     case 'opacity-down':
-      return app.opacityDown();
+      return app.transparencyDown();
     case 'autoscroll-toggle':
       return app.toggleAutoScroll();
     case 'autoscroll-speed':

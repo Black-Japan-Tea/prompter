@@ -81,8 +81,8 @@ export class PrompterApp implements AppCommandTarget {
       ['open-file', () => this.openViaDialog()],
       ['open-recent', () => this.repeatLastFile()],
       ['repeat-last-file', () => this.repeatLastFile()],
-      ['opacity-up', () => this.opacityUp()],
-      ['opacity-down', () => this.opacityDown()],
+      ['opacity-up', () => this.transparencyUp()],
+      ['opacity-down', () => this.transparencyDown()],
       ['autoscroll-toggle', () => this.toggleAutoScroll()],
       ['clickthrough-toggle', () => this.toggleClickThrough()],
       ['always-top-toggle', () => this.toggleAlwaysOnTop()],
@@ -186,14 +186,16 @@ export class PrompterApp implements AppCommandTarget {
     this.doc.repeatLastFile();
   }
 
-  opacityUp(): void {
-    this.opacity.stepUp();
+  /** Прозрачность растёт — окно прозрачнее (непрозрачность вниз, до 0.05). */
+  transparencyUp(): void {
+    this.opacity.stepDown();
     this.settings.update({ opacity: this.opacity.value });
     this.broadcast();
   }
 
-  opacityDown(): void {
-    this.opacity.stepDown();
+  /** Прозрачность падает — окно плотнее (непрозрачность вверх, до 1). */
+  transparencyDown(): void {
+    this.opacity.stepUp();
     this.settings.update({ opacity: this.opacity.value });
     this.broadcast();
   }

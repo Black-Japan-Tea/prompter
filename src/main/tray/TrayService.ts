@@ -10,8 +10,8 @@ export interface TrayActions {
   openFile(): void;
   openRecent(path: string): void;
   recentFiles(): readonly string[];
-  opacityStepUp(): void;
-  opacityStepDown(): void;
+  transparencyUp(): void;
+  transparencyDown(): void;
   autoScrollEnabled(): boolean;
   toggleAutoScroll(): void;
   autoScrollSpeed(): AutoScrollSpeed;
@@ -117,12 +117,12 @@ export class TrayService {
       {
         label: 'Прозрачность +',
         accelerator: this.accel('opacity-up'),
-        click: (): void => this.actions.opacityStepUp(),
+        click: (): void => this.actions.transparencyUp(),
       },
       {
         label: 'Прозрачность −',
         accelerator: this.accel('opacity-down'),
-        click: (): void => this.actions.opacityStepDown(),
+        click: (): void => this.actions.transparencyDown(),
       },
       { type: 'separator' },
       {
