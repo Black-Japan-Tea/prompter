@@ -19,7 +19,10 @@ function countWhere(image: RgbaImage, predicate: (p: [number, number, number, nu
   return count;
 }
 
-describe('paintIcon — форма и цвета', () => {
+const isDark = (p: [number, number, number, number]) => p[3] === 255 && p[0] < 60 && p[1] < 64 && p[2] < 70;
+const isOrange = (p: [number, number, number, number]) => p[3] === 255 && p[0] > 180 && p[2] < 130;
+
+describe('paintIcon — речевая выноска: тёмный фон, оранжевый бабл, тёмные строки', () => {
   const size = 64;
   const icon = paintIcon(size);
 
@@ -36,43 +39,42 @@ describe('paintIcon — форма и цвета', () => {
     expect(pixel(icon, size - 1, size - 1)[3]).toBe(0);
   });
 
-  it('центр непрозрачный', () => {
-    expect(pixel(icon, Math.floor(size / 2), Math.floor(size / 2))[3]).toBe(255);
+  it('фон квадрата — тёмный графит #1e2024', () => {
+    const corner = pixel(icon, 10, 10); // внутри квадрата, вне бабла и хвоста
+    expect(isDark(corner)).toBe(true);
+    const bottomRight = pixel(icon, Math.floor(size * 0.85), Math.floor(size * 0.85));
+    expect(isDark(bottomRight)).toBe(true);
   });
 
-  it('градиент: тёплые каналы растут от левого верхнего к правому нижнему', () => {
-    // Оранжевый бренд: #FD6500 (253,101,0) → #FF8A3A (255,138,58).
-    const topLeft = pixel(icon, Math.floor(size * 0.2), Math.floor(size * 0.2));
-    const bottomRight = pixel(icon, Math.floor(size * 0.82), Math.floor(size * 0.82));
-    expect(bottomRight[1]).toBeGreaterThan(topLeft[1]); // зелёный растёт
-    expect(bottomRight[2]).toBeGreaterThan(topLeft[2]); // синий растёт
+  it('бабл — фирменный оранжевый, крупный', () => {
+    const onBubble = pixel(icon, 32, 17); // верх бабла над строками
+    expect(isOrange(onBubble)).toBe(true);
+    const share = countWhere(icon, isOrange) / (size * size);
+    expect(share).toBeGreaterThan(0.2);
   });
 
-  it('оранжевый доминирует: красный канал сильно больше синего', () => {
-    const topLeft = pixel(icon, Math.floor(size * 0.2), Math.floor(size * 0.2));
-    expect(topLeft[0]).toBeGreaterThan(topLeft[2] + 150); // 253 против ~0
+  it('строки текста внутри бабла — тёмные на оранжевом', () => {
+    // Внутри бабла (зона y 20..36) фон оранжевый: тёмное там — только строки.
+    let bars = 0;
+    for (let y = 20; y <= 36; y++) {
+      for (let x = 16; x <= 48; x++) {
+        if (isDark(pixel(icon, x, y))) {
+          bars++;
+        }
+      }
+    }
+    expect(bars).toBeGreaterThan(30);
   });
 
-  it('крупная галочка: белые пиксели вдоль всей осевой линии', () => {
-    // Осевая ломаная галочки A(0.25,0.52) → B(0.435,0.68) → C(0.76,0.33).
-    const isWhite = (p: [number, number, number, number]) =>
-      p[3] === 255 && p[0] > 225 && p[1] > 225 && p[2] > 225;
-    expect(isWhite(pixel(icon, 16, 33))).toBe(true); // около A
-    expect(isWhite(pixel(icon, 22, 39))).toBe(true); // середина A→B
-    expect(isWhite(pixel(icon, 28, 44))).toBe(true); // около B
-    expect(isWhite(pixel(icon, 38, 32))).toBe(true); // середина B→C
-    expect(isWhite(pixel(icon, 49, 21))).toBe(true); // около C
-  });
-
-  it('галочка занимает заметную долю площади (крупный глиф)', () => {
+  it('белых пикселей больше нет', () => {
     const whites = countWhere(icon, ([r, g, b, a]) => a === 255 && r > 225 && g > 225 && b > 225);
-    expect(whites).toBeGreaterThan(size * size * 0.06);
+    expect(whites).toBe(0);
   });
 
-  it('строк текста больше нет: тёмно-оранжевый бар-цвет отсутствует', () => {
-    // Прежний цвет строк (214,83,0) зеленее любого оттенка градиента (g ≥ 101).
-    const bars = countWhere(icon, ([, g, , a]) => a === 255 && g < 90);
-    expect(bars).toBe(0);
+  it('хвост-указатель крупный: оранжевый клин глубоко вниз-влево', () => {
+    // Прежний хвост кончался на 0.72 высоты — заметный должен доставать ниже.
+    expect(isOrange(pixel(icon, 22, 45))).toBe(true); // основание хвоста
+    expect(isOrange(pixel(icon, 20, 48))).toBe(true); // середина клина
   });
 
   it('края сглажены суперсэмплингом: есть полупрозрачные пиксели', () => {
@@ -82,15 +84,20 @@ describe('paintIcon — форма и цвета', () => {
 });
 
 describe('paintIcon — мелкие размеры', () => {
-  it('16px читаем: прозрачные углы, оранжевый фон и белая галочка в центре', () => {
+  it('16px читаем: тёмный угол, оранжевый бабл, тёмные строки', () => {
     const small = paintIcon(16);
-    expect(pixel(small, 0, 0)[3]).toBe(0);
-    expect(pixel(small, 8, 8)[3]).toBe(255);
-    // Точка на осевой галочки при 16px: B(0.435,0.68) ≈ (7,11). Штрих тоньше
-    // пикселя — на краю цвет смешан, поэтому порог мягче, но заметно белее фона.
-    const onStroke = pixel(small, 7, 11);
-    expect(onStroke[3]).toBe(255);
-    expect(onStroke[0]).toBeGreaterThan(200);
-    expect(onStroke[1]).toBeGreaterThan(170);
+    expect(pixel(small, 0, 0)[3]).toBe(0); // скругление
+    expect(isDark(pixel(small, 12, 14))).toBe(true); // фон квадрата (правый низ)
+    expect(isOrange(pixel(small, 8, 4))).toBe(true); // бабл (выше первой строки)
+    // Строки видны и в трее: в центре бабла есть тёмные пиксели.
+    let bars = 0;
+    for (let y = 5; y <= 10; y++) {
+      for (let x = 5; x <= 11; x++) {
+        if (pixel(small, x, y)[0] < 90 && pixel(small, x, y)[3] === 255) {
+          bars++;
+        }
+      }
+    }
+    expect(bars).toBeGreaterThan(2);
   });
 });
