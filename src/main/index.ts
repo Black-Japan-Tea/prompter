@@ -4,6 +4,11 @@ import { AutoScrollSpeed } from '../shared/settings';
 
 let prompter: PrompterApp | null = null;
 
+// Изоляция настроек для E2E: подменяем каталог userData до готовности app.
+if (process.env.PROMPTER_TEST_USER_DATA) {
+  app.setPath('userData', process.env.PROMPTER_TEST_USER_DATA);
+}
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -37,6 +42,7 @@ function installTestHooks(instance: PrompterApp): void {
     toggleAutoScroll: (): void => instance.toggleAutoScrollForTests(),
     setAutoScrollSpeed: (speed: AutoScrollSpeed): void =>
       instance.setAutoScrollSpeedForTests(speed),
+    stepOpacity: (direction: 'up' | 'down'): void => instance.stepOpacityForTests(direction),
     state: (): unknown => instance.debugState(),
   };
 }

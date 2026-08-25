@@ -5,8 +5,9 @@ import { Header } from './header';
 import { AutoScroller } from './autoscroll';
 import { initDragAndDrop } from './dnd';
 
+const viewerEl = requireElement('viewer');
 const viewer = new Viewer(document, new MarkdownRenderer());
-const scroller = new AutoScroller(window);
+const scroller = new AutoScroller(viewerEl, window);
 const header = new Header(document, {
   onHide: () => window.prompter.hideWindow(),
   onQuit: () => window.prompter.quit(),
@@ -37,7 +38,6 @@ window.prompter.onStateChanged((state) => {
 });
 
 // Прогресс чтения: бейдж в шапке + рейка автопрокрутки у правого края.
-const viewerEl = requireElement('viewer');
 const rail = requireElement('rail');
 const railFill = requireElement('rail-fill');
 viewerEl.addEventListener('scroll', updateProgress);

@@ -51,6 +51,8 @@ export class PrompterApp {
   }
 
   dispose(): void {
+    // Сначала разрешаем окну закрываться, иначе перехват close отменит выход.
+    this.window.prepareForQuit();
     this.saveBounds();
     this.shortcuts.dispose();
     this.watcher.stop();
@@ -77,11 +79,20 @@ export class PrompterApp {
     this.setAutoScrollSpeed(speed);
   }
 
+  stepOpacityForTests(direction: 'up' | 'down'): void {
+    if (direction === 'up') {
+      this.opacityUp();
+    } else {
+      this.opacityDown();
+    }
+  }
+
   debugState(): BroadcastState & {
     windowVisible: boolean;
     contentProtection: boolean;
     skipTaskbar: boolean;
     currentFile: string | null;
+    trayAlive: boolean;
   } {
     return {
       ...this.broadcastState(),
@@ -89,6 +100,7 @@ export class PrompterApp {
       contentProtection: this.window.isContentProtected,
       skipTaskbar: this.window.isSkipTaskbar,
       currentFile: this.currentFile,
+      trayAlive: this.tray.isAlive,
     };
   }
 

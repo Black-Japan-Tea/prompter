@@ -1,4 +1,4 @@
-import { Menu, Tray, app, nativeImage } from 'electron';
+import { Menu, Tray, nativeImage } from 'electron';
 import { AutoScrollSpeed } from '../../shared/settings';
 
 /** Действия, которые меню трея запрашивает у приложения. */
@@ -103,9 +103,13 @@ export class TrayService {
     ]);
   }
 
+  /** Жив ли системный трей (для диагностики и E2E). */
+  get isAlive(): boolean {
+    return !this.tray.isDestroyed();
+  }
+
   destroy(): void {
     this.tray.destroy();
-    void app; // ссылка живёт для будущих platform-зависимостей меню
   }
 }
 

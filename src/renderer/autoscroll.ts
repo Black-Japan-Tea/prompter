@@ -7,13 +7,16 @@ const PIXELS_PER_SECOND: Record<AutoScrollSpeed, number> = {
   fast: 90,
 };
 
-/** Плавная автопрокрутка окна через requestAnimationFrame. */
+/** Плавная автопрокрутка контейнера контента через requestAnimationFrame. */
 export class AutoScroller {
   private frame: number | null = null;
   private enabled = false;
   private speed: AutoScrollSpeed = 'medium';
 
-  constructor(private readonly view: Window) {}
+  constructor(
+    private readonly scroller: HTMLElement,
+    private readonly view: Window,
+  ) {}
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
@@ -41,11 +44,11 @@ export class AutoScroller {
     if (!this.enabled) {
       return;
     }
-    const doc = this.view.document.documentElement;
+    // Скроллится именно .viewer: у html/body стоит overflow:hidden.
     const step = PIXELS_PER_SECOND[this.speed] / 60;
-    const maxScroll = doc.scrollHeight - this.view.innerHeight;
-    if (this.view.scrollY + step < maxScroll) {
-      this.view.scrollBy(0, step);
+    const maxScroll = this.scroller.scrollHeight - this.scroller.clientHeight;
+    if (this.scroller.scrollTop + step < maxScroll) {
+      this.scroller.scrollTop += step;
       this.startLoop();
     } else {
       // Дошли до конца — останавливаемся, чтобы не молотить кадры впустую.

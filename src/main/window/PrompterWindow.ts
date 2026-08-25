@@ -15,6 +15,7 @@ export class PrompterWindow {
   readonly win: BrowserWindow;
   private contentProtectionOn = false;
   private skipTaskbarOn = true;
+  private quitting = false;
 
   constructor(settings: AppSettings) {
     this.win = new BrowserWindow({
@@ -30,7 +31,8 @@ export class PrompterWindow {
       transparent: true,
       resizable: true,
       webPreferences: {
-        preload: join(__dirname, '..', 'preload', 'preload.js'),
+        // __dirname здесь — dist/main/window, поэтому два уровня вверх до dist.
+        preload: join(__dirname, '..', '..', 'preload', 'preload.js'),
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: true,
@@ -40,11 +42,23 @@ export class PrompterWindow {
     this.win.setAlwaysOnTop(true, 'screen-saver');
     this.applyContentProtection();
     // Крестик и системные жесты не убивают приложение — только прячут окно.
+    // При настоящем выходе (prepareForQuit) закрытие разрешаем.
     this.win.on('close', (event) => {
-      event.preventDefault();
-      this.win.hide();
+      if (!this.quitting) {
+        event.preventDefault();
+        this.win.hide();
+      }
     });
-    void this.win.loadFile(join(__dirname, '..', 'renderer', 'index.html'));
+    this.win
+      .loadFile(join(__dirname, '..', '..', 'renderer', 'index.html'))
+      .catch((error: unknown) => {
+        console.error('Не удалось загрузить окно суфлёра:', error);
+      });
+  }
+
+  /** Разрешает реальное закрытие окна при выходе из приложения. */
+  prepareForQuit(): void {
+    this.quitting = true;
   }
 
   /** Тот самый вызов, прячущий окно из трансляций: setContentProtection. */
