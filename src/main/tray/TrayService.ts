@@ -43,7 +43,7 @@ export class TrayService {
     // выбирает точный размер без системного даунскейла (чёткая галочка).
     this.icon = icon;
     this.tray = new Tray(this.icon);
-    this.tray.setToolTip('Prompter — суфлёр для Markdown\nДвойной клик — показать окно');
+    this.tray.setToolTip('Prompter');
     this.tray.setContextMenu(this.buildMenu());
     // Стандарт Windows: двойной клик — главное действие (показ окна),
     // правый — контекстное меню. Одиночный клик окно не дёргает.
