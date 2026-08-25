@@ -1,11 +1,13 @@
 import { RgbaImage, createImage, blendPixel } from './RgbaImage';
 
-// Фирменные цвета: оранжевый #FD6500 → тёплый #FF8A3A, белый пузырь,
-// строки текста — темнее базового оранжевого для контраста на белом.
+// Фирменные цвета: оранжевый #FD6500 → тёплый #FF8A3A, крупная белая галочка.
+// Мелкие размеры (трей 16px) читаются только по простому глифу — без пузыря.
 const ORANGE_FROM: readonly [number, number, number] = [253, 101, 0];
 const ORANGE_TO: readonly [number, number, number] = [255, 138, 58];
 const WHITE: readonly [number, number, number] = [242, 244, 251];
-const BAR: readonly [number, number, number] = [214, 83, 0];
+
+// Суперсэмплинг: рисуем в SSAA× больше и усредняем блок, чтобы края были чёткими.
+const SSAA = 4;
 
 type Color = readonly [number, number, number];
 
@@ -35,7 +37,7 @@ function roundedRectSdf(
   return Math.sqrt(ax * ax + ay * ay) + Math.min(Math.max(dx, dy), 0) - radius;
 }
 
-/** Расстояние от точки до отрезка (для корректной внешней дистанции треугольника). */
+/** Расстояние от точки до отрезка. */
 function segmentDistance(
   px: number, py: number,
   x1: number, y1: number, x2: number, y2: number,
@@ -49,41 +51,13 @@ function segmentDistance(
   return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
 }
 
-/** Дистанция до треугольника: снаружи — до ближайшего ребра-отрезка, внутри — отрицательная. */
-function triangleSdf(
-  px: number, py: number,
-  [ax, ay]: [number, number],
-  [bx, by]: [number, number],
-  [cx, cy]: [number, number],
-): number {
-  const gx = (ax + bx + cx) / 3;
-  const gy = (ay + by + cy) / 3;
-  const edges: Array<[[number, number], [number, number]]> = [
-    [[ax, ay], [bx, by]],
-    [[bx, by], [cx, cy]],
-    [[cx, cy], [ax, ay]],
-  ];
-  const signed: number[] = edges.map(([[x1, y1], [x2, y2]]) => {
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const len = Math.hypot(dx, dy);
-    const cross = dx * (py - y1) - dy * (px - x1);
-    const ref = dx * (gy - y1) - dy * (gx - x1) >= 0 ? 1 : -1;
-    return (cross / len) * ref;
-  });
-  if (signed.some((value) => value < 0)) {
-    // Точка вне треугольника: дистанция до ближайшего отрезка-ребра.
-    return Math.min(
-      ...edges.map(([[x1, y1], [x2, y2]]) => segmentDistance(px, py, x1, y1, x2, y2)),
-    );
-  }
-  return Math.min(...signed);
-}
-
-/** Покрытие 0..1 с однопиксельным сглаживанием по дистанции. */
-function coverage(distance: number): number {
-  return clamp01(0.5 - distance);
-}
+/** Осевая ломаная галочки в долях размера: короткое плечо вниз, длинное вверх. */
+const CHECK_POINTS: ReadonlyArray<readonly [number, number]> = [
+  [0.25, 0.52],
+  [0.435, 0.68],
+  [0.76, 0.33],
+];
+const CHECK_STROKE = 0.14;
 
 function paintBackground(image: RgbaImage): void {
   const size = image.width;
@@ -93,7 +67,7 @@ function paintBackground(image: RgbaImage): void {
         x + 0.5, y + 0.5, size / 2, size / 2,
         size / 2 - 0.5, size / 2 - 0.5, size * 0.22,
       );
-      const cov = coverage(d);
+      const cov = clamp01(0.5 - d);
       if (cov > 0) {
         const t = (x + y) / (2 * (size - 1));
         blendPixel(image, x, y, mix(ORANGE_FROM, ORANGE_TO, t), cov);
@@ -102,21 +76,22 @@ function paintBackground(image: RgbaImage): void {
   }
 }
 
-function paintBubble(image: RgbaImage): void {
+/** Галочка — два капсульных штриха по осевой ломаной, со скруглёнными концами. */
+function paintCheckmark(image: RgbaImage): void {
   const size = image.width;
-  const tail: [number, number][] = [
-    [size * 0.30, size * 0.60],
-    [size * 0.30, size * 0.72],
-    [size * 0.43, size * 0.60],
-  ];
+  const half = (size * CHECK_STROKE) / 2;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const bubble = roundedRectSdf(
-        x + 0.5, y + 0.5, size * 0.5, size * 0.44,
-        size * 0.32, size * 0.235, size * 0.08,
-      );
-      const tailDist = triangleSdf(x + 0.5, y + 0.5, tail[0], tail[1], tail[2]);
-      const cov = Math.max(coverage(bubble), coverage(tailDist));
+      let dist = Infinity;
+      for (let i = 0; i + 1 < CHECK_POINTS.length; i++) {
+        const [x1, y1] = CHECK_POINTS[i];
+        const [x2, y2] = CHECK_POINTS[i + 1];
+        dist = Math.min(
+          dist,
+          segmentDistance(x + 0.5, y + 0.5, x1 * size, y1 * size, x2 * size, y2 * size),
+        );
+      }
+      const cov = clamp01(half - dist + 0.5);
       if (cov > 0) {
         blendPixel(image, x, y, WHITE, cov);
       }
@@ -124,36 +99,43 @@ function paintBubble(image: RgbaImage): void {
   }
 }
 
-function paintBars(image: RgbaImage): void {
-  const size = image.width;
-  const count = size >= 24 ? 3 : 2;
-  const barHeight = size * 0.05;
-  const gap = size * 0.04;
-  const widths = [0.34, 0.24, 0.30];
-  const centerY = size * 0.44;
-  for (let i = 0; i < count; i++) {
-    const barY = centerY + (i - (count - 1) / 2) * (barHeight + gap);
-    const halfW = (size * widths[i]) / 2;
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        const d = roundedRectSdf(
-          x + 0.5, y + 0.5, size * 0.5, barY,
-          halfW, barHeight / 2, barHeight / 2,
-        );
-        const cov = coverage(d);
-        if (cov > 0) {
-          blendPixel(image, x, y, BAR, cov);
+/** Усредняет блок SSAA×SSAA hi-res пикселей в один итоговый пиксель. */
+function downsample(hi: RgbaImage, factor: number): RgbaImage {
+  const size = hi.width / factor;
+  const out = createImage(size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      let r = 0, g = 0, b = 0, a = 0;
+      for (let sy = 0; sy < factor; sy++) {
+        for (let sx = 0; sx < factor; sx++) {
+          const i = ((y * factor + sy) * hi.width + x * factor + sx) * 4;
+          r += hi.pixels[i] * hi.pixels[i + 3];
+          g += hi.pixels[i + 1] * hi.pixels[i + 3];
+          b += hi.pixels[i + 2] * hi.pixels[i + 3];
+          a += hi.pixels[i + 3];
         }
+      }
+      const o = (y * size + x) * 4;
+      if (a === 0) {
+        out.pixels[o] = 0;
+        out.pixels[o + 1] = 0;
+        out.pixels[o + 2] = 0;
+        out.pixels[o + 3] = 0;
+      } else {
+        out.pixels[o] = Math.round(r / a);
+        out.pixels[o + 1] = Math.round(g / a);
+        out.pixels[o + 2] = Math.round(b / a);
+        out.pixels[o + 3] = Math.round(a / (factor * factor));
       }
     }
   }
+  return out;
 }
 
-/** Рисует иконку приложения: градиентный квадрат, пузырь, строки текста. */
+/** Рисует иконку приложения: градиентный квадрат с крупной белой галочкой. */
 export function paintIcon(size: number): RgbaImage {
-  const image = createImage(size, size);
-  paintBackground(image);
-  paintBubble(image);
-  paintBars(image);
-  return image;
+  const hi = createImage(size * SSAA, size * SSAA);
+  paintBackground(hi);
+  paintCheckmark(hi);
+  return downsample(hi, SSAA);
 }
