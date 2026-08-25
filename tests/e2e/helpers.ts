@@ -16,6 +16,7 @@ export interface AppState {
   alwaysOnTop: boolean;
   fileName: string | null;
   registeredShortcuts: string[];
+  accelerators: Record<string, string>;
 }
 
 export interface LaunchedApp {
@@ -33,6 +34,13 @@ export async function launchPrompter(userDataDir: string): Promise<LaunchedApp> 
     },
   });
   const page = await app.firstWindow();
+  // firstWindow резолвится до загрузки renderer: ждём готовности preload-моста,
+  // иначе первые нажатия уходят в страницу без подписчиков.
+  await page.waitForFunction(
+    () => (window as unknown as { prompter?: unknown }).prompter !== undefined,
+    undefined,
+    { timeout: 15000 },
+  );
   return { app, page };
 }
 

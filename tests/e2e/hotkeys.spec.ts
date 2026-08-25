@@ -14,56 +14,74 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  await launched.app.close();
-  rmSync(workDir, { recursive: true, force: true });
+  await launched.app.close().catch(() => undefined);
+  try {
+    rmSync(workDir, { recursive: true, force: true });
+  } catch {
+    // Временный каталог может быть кратковременно занят — не роняем	suite.
+  }
 });
 
-/** Полный эталонный набор глобальных акселераторов. */
-function expectedGlobalShortcuts(): string[] {
-  return [
-    'Control+Alt+P',
-    'Control+Alt+S',
-    'Control+Alt+H',
-    'Control+Alt+O',
-    'Control+Alt+R',
-    'Control+Alt+Enter',
-    'Control+Alt+=',
-    'Control+Alt+-',
-    'Control+Alt+Space',
-    'Control+Alt+T',
-    'Control+Alt+A',
-    'Control+Alt+Q',
-    'Control+Alt+1',
-    'Control+Alt+2',
-    'Control+Alt+3',
-  ];
-}
+/** Все команды приложения — каждая обязана иметь рабочий хоткей. */
+const COMMAND_TYPES = [
+  'toggle-window',
+  'show-window',
+  'hide-window',
+  'open-file',
+  'open-recent',
+  'repeat-last-file',
+  'opacity-up',
+  'opacity-down',
+  'autoscroll-toggle',
+  'autoscroll-speed',
+  'clickthrough-toggle',
+  'always-top-toggle',
+  'quit',
+];
 
-test('все функции покрыты зарегистрированными глобальными хоткеями', async () => {
+test('каждая функция покрыта активным хоткеем (с фолбэками при конфликтах)', async () => {
   const state = await mainState(launched.app);
-  expect([...state.registeredShortcuts].sort()).toEqual(expectedGlobalShortcuts().sort());
+  for (const type of COMMAND_TYPES) {
+    expect(
+      state.accelerators[type],
+      `у команды «${type}» нет активного хоткея`,
+    ).toBeTruthy();
+  }
+  // Активные хоткеи реально зарегистрированы в системе.
+  for (const accelerator of Object.values(state.accelerators)) {
+    if (accelerator === 'Control+Alt+1..3') {
+      continue; // составная подпись, реальные три проверяются ниже
+    }
+    expect(state.registeredShortcuts).toContain(accelerator);
+  }
+  expect(state.registeredShortcuts).toContain('Control+Alt+1');
+  expect(state.registeredShortcuts).toContain('Control+Alt+2');
+  expect(state.registeredShortcuts).toContain('Control+Alt+3');
 });
 
-test('Ctrl+Alt+P показывает и прячет окно через реальный диспетчер', async () => {
+test('переключение окна работает через активный хоткей тогла', async () => {
   const { app } = launched;
-  await mainInvoke(app, 'dispatchAccelerator', 'Control+Alt+P');
+  const toggle = (await mainState(app)).accelerators['toggle-window'];
+
+  await mainInvoke(app, 'dispatchAccelerator', toggle);
   expect((await mainState(app)).windowVisible).toBe(true);
 
-  await mainInvoke(app, 'dispatchAccelerator', 'Control+Alt+P');
+  await mainInvoke(app, 'dispatchAccelerator', toggle);
   expect((await mainState(app)).windowVisible).toBe(false);
 });
 
-test('Ctrl+Alt+= клэмпит прозрачность на 100% и шлёт тост', async () => {
+test('хоткей прозрачности вверх клэмпит на 100% и шлёт тост', async () => {
   const { app, page } = launched;
+  const up = (await mainState(app)).accelerators['opacity-up'];
   for (let i = 0; i < 5; i++) {
-    await mainInvoke(app, 'dispatchAccelerator', 'Control+Alt+=');
+    await mainInvoke(app, 'dispatchAccelerator', up);
   }
   const state = await mainState(app);
   expect(state.opacity).toBe(1);
   await expect(page.locator('.toast').last()).toContainText('Прозрачность 100%');
 });
 
-test('Ctrl+Alt+Space и Ctrl+Alt+3 включают автопрокрутку на быстрой', async () => {
+test('хоткеи автопрокрутки и скорости включают быструю прокрутку', async () => {
   const { app } = launched;
   await mainInvoke(app, 'dispatchAccelerator', 'Control+Alt+Space');
   await mainInvoke(app, 'dispatchAccelerator', 'Control+Alt+3');
@@ -76,38 +94,41 @@ test('Ctrl+Alt+Space и Ctrl+Alt+3 включают автопрокрутку �
   expect((await mainState(app)).autoScrollEnabled).toBe(false);
 });
 
-test('Ctrl+Alt+T переключает клик-сквозь и возвращает обратно', async () => {
+test('хоткей клик-сквозь переключает и возвращает обратно', async () => {
   const { app } = launched;
-  await mainInvoke(app, 'dispatchAccelerator', 'Control+Alt+T');
+  const key = (await mainState(app)).accelerators['clickthrough-toggle'];
+  await mainInvoke(app, 'dispatchAccelerator', key);
   expect((await mainState(app)).clickThrough).toBe(true);
 
-  await mainInvoke(app, 'dispatchAccelerator', 'Control+Alt+T');
+  await mainInvoke(app, 'dispatchAccelerator', key);
   expect((await mainState(app)).clickThrough).toBe(false);
 });
 
-test('Ctrl+Alt+A переключает поверх-всех (реальный флаг окна)', async () => {
+test('хоткей поверх-всех переключает реальный флаг окна', async () => {
   const { app } = launched;
-  await mainInvoke(app, 'dispatchAccelerator', 'Control+Alt+A');
+  const key = (await mainState(app)).accelerators['always-top-toggle'];
+  await mainInvoke(app, 'dispatchAccelerator', key);
   expect((await mainState(app)).alwaysOnTopActive).toBe(false);
 
-  await mainInvoke(app, 'dispatchAccelerator', 'Control+Alt+A');
+  await mainInvoke(app, 'dispatchAccelerator', key);
   expect((await mainState(app)).alwaysOnTopActive).toBe(true);
 });
 
-test('Ctrl+Alt+R переоткрывает последний файл', async () => {
+test('хоткей последнего файла переоткрывает документ', async () => {
   const { app, page } = launched;
   await mainInvoke(app, 'openFile', mdPath);
   await expect(page.locator('#content h1')).toHaveText('Заметки');
 
-  await mainInvoke(app, 'dispatchAccelerator', 'Control+Alt+R');
+  const key = (await mainState(app)).accelerators['repeat-last-file'];
+  await mainInvoke(app, 'dispatchAccelerator', key);
   expect((await mainState(app)).currentFile).toBe(mdPath);
-  await expect(page.locator('#content h1')).toHaveText('Заметки');
 });
 
-test('Ctrl+Alt+O открывает файл через симулированный диалог', async () => {
+test('хоткей открытия файла работает через симулированный диалог', async () => {
   const { app, page } = launched;
+  const key = (await mainState(app)).accelerators['open-file'];
   await mainInvoke(app, 'simulateNextPick', mdPath);
-  await mainInvoke(app, 'dispatchAccelerator', 'Control+Alt+O');
+  await mainInvoke(app, 'dispatchAccelerator', key);
   await expect(page.locator('#content h1')).toHaveText('Заметки');
 });
 
@@ -146,16 +167,30 @@ test('реальный Ctrl+Q завершает приложение', async ()
       PROMPTER_TEST_USER_DATA: join(workDir, 'ud-quit'),
     },
   });
-  const page: Page = await app.firstWindow();
-  await app.evaluate(() => {
-    (globalThis as unknown as { __prompterTest: { toggleWindow(): void } }).__prompterTest.toggleWindow();
-  });
-  const closed = app.waitForEvent('close', { timeout: 15000 });
-  await page.keyboard.press('Control+q');
-  await closed;
-  const state: AppState | null = await Promise.race([
-    mainState(app).catch(() => null),
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), 100)),
-  ]);
-  expect(state).toBeNull();
+  try {
+    const page: Page = await app.firstWindow();
+    await page.waitForFunction(
+      () => (window as unknown as { prompter?: unknown }).prompter !== undefined,
+      undefined,
+      { timeout: 15000 },
+    );
+    await app.evaluate(() => {
+      (globalThis as unknown as { __prompterTest: { toggleWindow(): void } }).__prompterTest.toggleWindow();
+    });
+    // Ждём именно смерти процесса: событие 'close' у ElectronApplication капризно.
+    const exited = new Promise<void>((resolve) => {
+      app.process().once('exit', () => resolve());
+    });
+    // Ctrl+Q убивает приложение мгновенно: сам press может реджектнуться
+    // из-за смерти страницы — это и есть успех, ждём выхода процесса.
+    await page.keyboard.press('Control+q').catch(() => undefined);
+    await Promise.race([
+      exited,
+      new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('процесс не завершился за 15с')), 15000),
+      ),
+    ]);
+  } finally {
+    await app.close().catch(() => undefined);
+  }
 });

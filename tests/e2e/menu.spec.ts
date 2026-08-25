@@ -160,15 +160,16 @@ test('пункт «Спрятать окно» скрывает окно', async
 });
 
 test('клик-сквозь из меню выключается хоткеем — мышь снова работает', async () => {
-  const { page } = launched;
+  const { page, app } = launched;
   await openMenu();
   await page.locator('.menu-item[data-id="clickthrough"]').click();
-  await expect((await mainState(launched.app)).clickThrough).toBe(true);
+  await expect((await mainState(app)).clickThrough).toBe(true);
   await expect(page.locator('.toast')).toContainText('Клик-сквозь');
 
-  // Выключаем через реальный путь хоткея.
-  await mainInvoke(launched.app, 'dispatchAccelerator', 'Control+Alt+T');
-  await expect((await mainState(launched.app)).clickThrough).toBe(false);
+  // Выключаем через реальный путь активного хоткея (может быть фолбэком).
+  const key = (await mainState(app)).accelerators['clickthrough-toggle'];
+  await mainInvoke(app, 'dispatchAccelerator', key);
+  await expect((await mainState(app)).clickThrough).toBe(false);
 });
 
 function cssEscape(value: string): string {

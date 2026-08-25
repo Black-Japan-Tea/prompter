@@ -20,7 +20,7 @@ describe('chooseAccelerator — выбор свободного хоткея с 
   });
 
   it('не выбирает акселератор, уже занятый нашим же приложением в этой сессии', () => {
-    const taken = new Set(['Alt+Shift+P']);
+    const taken = new Set(['Control+Alt+P', 'Alt+Shift+P']);
     expect(
       chooseAccelerator('Control+Alt+P', ['Alt+Shift+P', 'Control+Shift+P'], () => true, taken),
     ).toBe('Control+Shift+P');

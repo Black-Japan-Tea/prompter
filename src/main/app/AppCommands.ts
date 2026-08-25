@@ -1,6 +1,29 @@
-import { ACCELERATORS, SPEED_ACCELERATORS } from '../../shared/contracts';
+import {
+  ACCELERATORS,
+  SPEED_ACCELERATORS,
+  AppCommandType,
+} from '../../shared/contracts';
 import { AutoScrollSpeed } from '../../shared/settings';
 import { AppCommandTarget } from './commands';
+
+/**
+ * Выбирает первый свободный акселератор из первичного и фолбэков.
+ * «Занято» — и другими программами (isFree от globalShortcut.register),
+ * и нами же в этой сессии (taken). Возвращает null, если все варианты заняты.
+ */
+export function chooseAccelerator(
+  primary: string,
+  fallbacks: readonly string[],
+  isFree: (accelerator: string) => boolean,
+  taken: ReadonlySet<string>,
+): string | null {
+  for (const accelerator of [primary, ...fallbacks]) {
+    if (!taken.has(accelerator) && isFree(accelerator)) {
+      return accelerator;
+    }
+  }
+  return null;
+}
 
 /** Карта «акселератор → действие»: единый источник для регистрации. */
 export function buildGlobalBindings(app: AppCommandTarget): Record<string, () => void> {
@@ -31,6 +54,7 @@ export interface TrayStateSource {
   clickThroughEnabled(): boolean;
   alwaysTopEnabled(): boolean;
   recentFiles(): readonly string[];
+  accelerators(): Partial<Record<AppCommandType, string>>;
 }
 
 export function trayActionsFrom(
@@ -51,6 +75,7 @@ export function trayActionsFrom(
   toggleClickThrough(): void;
   alwaysTopEnabled(): boolean;
   toggleAlwaysTop(): void;
+  accelerators(): Partial<Record<AppCommandType, string>>;
   quit(): void;
 } {
   return {
@@ -68,6 +93,7 @@ export function trayActionsFrom(
     toggleClickThrough: () => app.toggleClickThrough(),
     alwaysTopEnabled: () => state.alwaysTopEnabled(),
     toggleAlwaysTop: () => app.toggleAlwaysOnTop(),
+    accelerators: () => state.accelerators(),
     quit: () => app.quit(),
   };
 }

@@ -88,6 +88,25 @@ export const SPEED_ACCELERATORS: Record<AutoScrollSpeed, string> = {
   fast: 'Control+Alt+3',
 };
 
+/**
+ * Фолбэки на случай, когда первичный хоткей занят другой программой
+ * (Win32 RegisterHotKey отказывает индивидуально, состав зависит от машины).
+ */
+export const ACCELERATOR_FALLBACKS: Partial<Record<AppCommandType, readonly string[]>> = {
+  'toggle-window': ['Alt+Shift+P', 'Control+Shift+P'],
+  'show-window': ['Alt+Shift+S', 'Control+Shift+S'],
+  'hide-window': ['Alt+Shift+H', 'Control+Shift+H'],
+  'open-file': ['Alt+Shift+O', 'Control+Shift+O'],
+  'open-recent': ['Alt+Shift+R', 'Control+Shift+R'],
+  'repeat-last-file': ['Alt+Shift+Enter'],
+  'opacity-up': ['Control+Alt+Up', 'Control+Alt+0'],
+  'opacity-down': ['Control+Alt+Down', 'Control+Alt+9'],
+  'autoscroll-toggle': ['Alt+Shift+Space'],
+  'clickthrough-toggle': ['Alt+Shift+T', 'Control+Shift+T'],
+  'always-top-toggle': ['Alt+Shift+A', 'Control+Shift+A'],
+  quit: ['Alt+Shift+Q', 'Control+Shift+Q'],
+};
+
 /** Сообщения для тостов: ошибки и важные события из main. */
 export interface NotifyPayload {
   level: 'info' | 'error';
@@ -104,6 +123,8 @@ export interface BroadcastState {
   clickThrough: boolean;
   alwaysOnTop: boolean;
   recentFiles: readonly string[];
+  /** Активные хоткеи с учётом фолбэков: «что реально работает сейчас». */
+  accelerators: Partial<Record<AppCommandType, string>>;
 }
 
 /** API, которое preload выставляет в renderer через contextBridge. */

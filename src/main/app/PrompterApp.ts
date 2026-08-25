@@ -12,9 +12,13 @@ import {
   FilePayload,
   NotifyPayload,
   AppCommand,
+  AppCommandType,
+  ACCELERATORS,
+  ACCELERATOR_FALLBACKS,
+  SPEED_ACCELERATORS,
 } from '../../shared/contracts';
 import { AppCommandTarget, executeCommand } from './commands';
-import { buildGlobalBindings, trayActionsFrom } from './AppCommands';
+import { trayActionsFrom, chooseAccelerator } from './AppCommands';
 import { DocumentController } from './DocumentController';
 import { registerAppIpc, clampFontSize } from './IpcBridge';
 
@@ -26,6 +30,8 @@ export class PrompterApp implements AppCommandTarget {
   private readonly shortcuts: ShortcutManager;
   private readonly opacity: OpacityController;
   private readonly doc: DocumentController;
+  /** Активные хоткеи после разрешения конфликтов с другими программами. */
+  private activeAccelerators: Partial<Record<AppCommandType, string>> = {};
 
   constructor() {
     this.settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
@@ -52,14 +58,78 @@ export class PrompterApp implements AppCommandTarget {
       quit: () => this.quit(),
       requestState: () => this.broadcast(),
     });
-    const failures = this.shortcuts.register(buildGlobalBindings(this));
-    if (failures.length > 0) {
-      const message = `Хоткеи заняты другими программами: ${failures.join(', ')}`;
+    this.registerHotkeysWithFallbacks();
+    this.tray.showStartupHint();
+    this.doc.restoreLastFile();
+  }
+
+  /**
+   * Регистрирует хоткеи с фолбэками: Win32 RegisterHotKey отказывает
+   * индивидуально (занято другими программами), состав зависит от машины.
+   * Пользователю сообщаем реально работающие комбинации.
+   */
+  private registerHotkeysWithFallbacks(): void {
+    const taken = new Set<string>();
+    const remapped: string[] = [];
+    const failed: AppCommandType[] = [];
+
+    const singleKeyCommands: Array<[AppCommandType, () => void]> = [
+      ['toggle-window', () => this.toggleWindow()],
+      ['show-window', () => this.showWindow()],
+      ['hide-window', () => this.hideWindow()],
+      ['open-file', () => this.openViaDialog()],
+      ['open-recent', () => this.repeatLastFile()],
+      ['repeat-last-file', () => this.repeatLastFile()],
+      ['opacity-up', () => this.opacityUp()],
+      ['opacity-down', () => this.opacityDown()],
+      ['autoscroll-toggle', () => this.toggleAutoScroll()],
+      ['clickthrough-toggle', () => this.toggleClickThrough()],
+      ['always-top-toggle', () => this.toggleAlwaysOnTop()],
+      ['quit', () => this.quit()],
+    ];
+
+    for (const [type, handler] of singleKeyCommands) {
+      const isFree = (accelerator: string): boolean =>
+        this.shortcuts.register({ [accelerator]: handler }).length === 0;
+      const chosen = chooseAccelerator(
+        ACCELERATORS[type],
+        ACCELERATOR_FALLBACKS[type] ?? [],
+        isFree,
+        taken,
+      );
+      if (chosen === null) {
+        failed.push(type);
+        continue;
+      }
+      taken.add(chosen);
+      this.activeAccelerators[type] = chosen;
+      if (chosen !== ACCELERATORS[type]) {
+        remapped.push(`${type}: ${chosen}`);
+      }
+    }
+
+    // Скорости — три отдельные комбинации, фолбэков не имеют.
+    for (const speed of ['slow', 'medium', 'fast'] as AutoScrollSpeed[]) {
+      const accelerator = SPEED_ACCELERATORS[speed];
+      const ok =
+        this.shortcuts.register({ [accelerator]: () => this.setAutoScrollSpeed(speed) })
+          .length === 0;
+      if (ok) {
+        taken.add(accelerator);
+        this.activeAccelerators['autoscroll-speed'] = 'Control+Alt+1..3';
+      } else {
+        failed.push('autoscroll-speed');
+      }
+    }
+
+    if (remapped.length > 0) {
+      this.notify('info', `Хоткеи переключены на свободные: ${remapped.join('; ')}`);
+    }
+    if (failed.length > 0) {
+      const message = `Не удалось назначить хоткеи: ${failed.join(', ')} (все комбинации заняты)`;
       console.error(message);
       this.notify('error', message);
     }
-    this.tray.showStartupHint();
-    this.doc.restoreLastFile();
   }
 
   dispose(): void {
@@ -224,6 +294,7 @@ export class PrompterApp implements AppCommandTarget {
       clickThrough: s.clickThrough,
       alwaysOnTop: s.alwaysOnTop,
       recentFiles: this.doc.recentList(),
+      accelerators: this.activeAccelerators,
     };
   }
 
@@ -234,6 +305,7 @@ export class PrompterApp implements AppCommandTarget {
       clickThroughEnabled: () => this.settings.load().clickThrough,
       alwaysTopEnabled: () => this.settings.load().alwaysOnTop,
       recentFiles: () => this.doc.recentList(),
+      accelerators: () => this.activeAccelerators,
     };
   }
 

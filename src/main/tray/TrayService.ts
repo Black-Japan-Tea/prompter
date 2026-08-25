@@ -1,6 +1,10 @@
 import { Menu, Tray, nativeImage } from 'electron';
 import { AutoScrollSpeed } from '../../shared/settings';
-import { ACCELERATORS, SPEED_ACCELERATORS } from '../../shared/contracts';
+import {
+  ACCELERATORS,
+  SPEED_ACCELERATORS,
+  AppCommandType,
+} from '../../shared/contracts';
 
 /** Действия, которые меню трея запрашивает у приложения. */
 export interface TrayActions {
@@ -18,6 +22,7 @@ export interface TrayActions {
   toggleClickThrough(): void;
   alwaysTopEnabled(): boolean;
   toggleAlwaysTop(): void;
+  accelerators(): Partial<Record<AppCommandType, string>>;
   quit(): void;
 }
 
@@ -71,6 +76,11 @@ export class TrayService {
     this.tray.destroy();
   }
 
+  /** Активный хоткей команды с учётом фолбэков. */
+  private accel(type: AppCommandType): string {
+    return this.actions.accelerators()[type] ?? ACCELERATORS[type];
+  }
+
   private buildMenu(): Menu {
     const recent = this.actions.recentFiles().slice(0, 10).map((path) => ({
       label: baseName(path),
@@ -80,18 +90,18 @@ export class TrayService {
     return Menu.buildFromTemplate([
       {
         label: 'Показать / Скрыть',
-        accelerator: ACCELERATORS['toggle-window'],
+        accelerator: this.accel('toggle-window'),
         click: (): void => this.actions.toggleWindow(),
       },
       { type: 'separator' },
       {
         label: 'Открыть файл…',
-        accelerator: ACCELERATORS['open-file'],
+        accelerator: this.accel('open-file'),
         click: (): void => this.actions.openFile(),
       },
       {
         label: 'Последний файл',
-        accelerator: ACCELERATORS['repeat-last-file'],
+        accelerator: this.accel('repeat-last-file'),
         click: (): void => this.actions.openRecent(this.actions.recentFiles()[0] ?? ''),
       },
       {
@@ -101,12 +111,12 @@ export class TrayService {
       { type: 'separator' },
       {
         label: 'Прозрачность +',
-        accelerator: ACCELERATORS['opacity-up'],
+        accelerator: this.accel('opacity-up'),
         click: (): void => this.actions.opacityStepUp(),
       },
       {
         label: 'Прозрачность −',
-        accelerator: ACCELERATORS['opacity-down'],
+        accelerator: this.accel('opacity-down'),
         click: (): void => this.actions.opacityStepDown(),
       },
       { type: 'separator' },
@@ -114,7 +124,7 @@ export class TrayService {
         label: 'Автопрокрутка',
         type: 'checkbox',
         checked: this.actions.autoScrollEnabled(),
-        accelerator: ACCELERATORS['autoscroll-toggle'],
+        accelerator: this.accel('autoscroll-toggle'),
         click: (): void => this.actions.toggleAutoScroll(),
       },
       {
@@ -131,25 +141,25 @@ export class TrayService {
         label: 'Клик-сквозь',
         type: 'checkbox',
         checked: this.actions.clickThroughEnabled(),
-        accelerator: ACCELERATORS['clickthrough-toggle'],
+        accelerator: this.accel('clickthrough-toggle'),
         click: (): void => this.actions.toggleClickThrough(),
       },
       {
         label: 'Поверх всех окон',
         type: 'checkbox',
         checked: this.actions.alwaysTopEnabled(),
-        accelerator: ACCELERATORS['always-top-toggle'],
+        accelerator: this.accel('always-top-toggle'),
         click: (): void => this.actions.toggleAlwaysTop(),
       },
       { type: 'separator' },
       {
         label: 'Спрятать окно',
-        accelerator: ACCELERATORS['hide-window'],
+        accelerator: this.accel('hide-window'),
         click: (): void => this.actions.toggleWindow(),
       },
       {
         label: 'Выход',
-        accelerator: ACCELERATORS['quit'],
+        accelerator: this.accel('quit'),
         click: (): void => this.actions.quit(),
       },
     ]);

@@ -19,8 +19,13 @@ function display(accelerator: string): string {
 
 /** Модель меню из текущего состояния: значения → чекбоксы и радио. */
 export function buildMenuItems(state: BroadcastState): MenuItemModel[] {
+  // Подпись хоткея — из активных (могут быть фолбэками после конфликтов).
+  const active = state.accelerators as Record<string, string | undefined>;
+  const accel = (type: string): string =>
+    display(active[type] ?? ACCELERATORS[type as keyof typeof ACCELERATORS]);
+
   const items: MenuItemModel[] = [
-    { id: 'open', kind: 'item', label: 'Открыть файл…', accelerator: display(ACCELERATORS['open-file']) },
+    { id: 'open', kind: 'item', label: 'Открыть файл…', accelerator: accel('open-file') },
     { id: 'repeat', kind: 'item', label: 'Последний файл', accelerator: 'Ctrl+Alt+↵' },
   ];
   for (const path of state.recentFiles.slice(0, 5)) {
@@ -28,14 +33,14 @@ export function buildMenuItems(state: BroadcastState): MenuItemModel[] {
   }
   items.push(
     { id: 'sep-1', kind: 'separator', label: '' },
-    { id: 'opacity-up', kind: 'item', label: 'Прозрачность +', accelerator: display(ACCELERATORS['opacity-up']) },
-    { id: 'opacity-down', kind: 'item', label: 'Прозрачность −', accelerator: display(ACCELERATORS['opacity-down']) },
+    { id: 'opacity-up', kind: 'item', label: 'Прозрачность +', accelerator: accel('opacity-up') },
+    { id: 'opacity-down', kind: 'item', label: 'Прозрачность −', accelerator: accel('opacity-down') },
     { id: 'sep-2', kind: 'separator', label: '' },
     {
       id: 'autoscroll',
       kind: 'checkbox',
       label: 'Автопрокрутка',
-      accelerator: display(ACCELERATORS['autoscroll-toggle']),
+      accelerator: accel('autoscroll-toggle'),
       checked: state.autoScrollEnabled,
     },
   );
@@ -54,14 +59,14 @@ export function buildMenuItems(state: BroadcastState): MenuItemModel[] {
       id: 'clickthrough',
       kind: 'checkbox',
       label: 'Клик-сквозь',
-      accelerator: display(ACCELERATORS['clickthrough-toggle']),
+      accelerator: accel('clickthrough-toggle'),
       checked: state.clickThrough,
     },
     {
       id: 'always-top',
       kind: 'checkbox',
       label: 'Поверх всех окон',
-      accelerator: display(ACCELERATORS['always-top-toggle']),
+      accelerator: accel('always-top-toggle'),
       checked: state.alwaysOnTop,
     },
     { id: 'sep-4', kind: 'separator', label: '' },
@@ -215,10 +220,7 @@ export class MenuView {
     if (command !== null) {
       this.onCommand(command);
     }
-    // Quit/hide закрывают окно сами; остальные пункты — закрываем меню.
-    if (id !== 'quit' && id !== 'hide') {
-      this.close();
-    }
+    this.close();
   }
 
   private bindKeyboard(): void {
