@@ -74,6 +74,9 @@ export class SettingsStore {
     if (typeof patch.clickThrough === 'boolean') {
       next.clickThrough = patch.clickThrough;
     }
+    if (Array.isArray(patch.recentFiles)) {
+      next.recentFiles = patch.recentFiles.filter((item): item is string => typeof item === 'string');
+    }
     return next;
   }
 

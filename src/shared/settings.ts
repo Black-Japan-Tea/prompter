@@ -22,6 +22,7 @@ export interface AppSettings {
   windowBounds: WindowBounds | null;
   autoScroll: AutoScrollSettings;
   clickThrough: boolean;
+  recentFiles: string[];
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -31,4 +32,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   windowBounds: null,
   autoScroll: { enabled: false, speed: 'medium' },
   clickThrough: false,
+  recentFiles: [],
 };
