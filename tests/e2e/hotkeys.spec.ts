@@ -22,11 +22,9 @@ test.afterAll(async () => {
   }
 });
 
-/** Все команды приложения — каждая обязана иметь рабочий хоткей. */
+/** Хоткейные команды — каждая обязана иметь рабочий хоткей. */
 const COMMAND_TYPES = [
   'toggle-window',
-  'show-window',
-  'hide-window',
   'open-file',
   'open-recent',
   'repeat-last-file',
@@ -36,6 +34,7 @@ const COMMAND_TYPES = [
   'autoscroll-speed',
   'clickthrough-toggle',
   'always-top-toggle',
+  'capture-protection-toggle',
   'quit',
 ];
 
@@ -47,16 +46,21 @@ test('каждая функция покрыта активным хоткеем
       `у команды «${type}» нет активного хоткея`,
     ).toBeTruthy();
   }
+  // Показ/скрытие — только тогл: отдельных show/hide хоткеев не существует.
+  expect(state.accelerators['show-window']).toBeUndefined();
+  expect(state.accelerators['hide-window']).toBeUndefined();
   // Активные хоткеи реально зарегистрированы в системе.
-  for (const accelerator of Object.values(state.accelerators)) {
-    if (accelerator === 'Control+Alt+1..3') {
-      continue; // составная подпись, реальные три проверяются ниже
+  for (const [type, accelerator] of Object.entries(state.accelerators)) {
+    if (type === 'autoscroll-speed') {
+      continue; // составная подпись, реальные комбинации — ниже
     }
+    expect(state.registeredShortcuts, type).toContain(accelerator);
+  }
+  for (const speed of ['slow', 'medium', 'fast'] as const) {
+    const accelerator = state.speedAccelerators[speed];
+    expect(accelerator, `скорость ${speed} без хоткея`).toBeTruthy();
     expect(state.registeredShortcuts).toContain(accelerator);
   }
-  expect(state.registeredShortcuts).toContain('Control+Alt+1');
-  expect(state.registeredShortcuts).toContain('Control+Alt+2');
-  expect(state.registeredShortcuts).toContain('Control+Alt+3');
 });
 
 test('переключение окна работает через активный хоткей тогла', async () => {
@@ -83,14 +87,16 @@ test('хоткей прозрачности вверх клэмпит на 100% 
 
 test('хоткеи автопрокрутки и скорости включают быструю прокрутку', async () => {
   const { app } = launched;
-  await mainInvoke(app, 'dispatchAccelerator', 'Control+Alt+Space');
-  await mainInvoke(app, 'dispatchAccelerator', 'Control+Alt+3');
+  const scrollKey = (await mainState(app)).accelerators['autoscroll-toggle'];
+  const fastKey = (await mainState(app)).speedAccelerators['fast'];
+  await mainInvoke(app, 'dispatchAccelerator', scrollKey);
+  await mainInvoke(app, 'dispatchAccelerator', fastKey);
 
   const state = await mainState(app);
   expect(state.autoScrollEnabled).toBe(true);
   expect(state.autoScrollSpeed).toBe('fast');
 
-  await mainInvoke(app, 'dispatchAccelerator', 'Control+Alt+Space');
+  await mainInvoke(app, 'dispatchAccelerator', scrollKey);
   expect((await mainState(app)).autoScrollEnabled).toBe(false);
 });
 
@@ -132,7 +138,23 @@ test('хоткей открытия файла работает через си�
   await expect(page.locator('#content h1')).toHaveText('Заметки');
 });
 
-test('реальные клавиши в окне: Esc прячет окно, Ctrl+= увеличивает кегль', async () => {
+test('хоткей невидимости переключает защиту от захвата с предупреждением', async () => {
+  const { app, page } = launched;
+  const key = (await mainState(app)).accelerators['capture-protection-toggle'];
+
+  await mainInvoke(app, 'dispatchAccelerator', key);
+  const off = await mainState(app);
+  expect(off.captureProtection).toBe(false);
+  expect(off.contentProtection).toBe(false);
+  await expect(page.locator('.toast').last()).toContainText('видно в трансляции');
+
+  await mainInvoke(app, 'dispatchAccelerator', key);
+  const on = await mainState(app);
+  expect(on.captureProtection).toBe(true);
+  expect(on.contentProtection).toBe(true);
+});
+
+test('реальные клавиши в окне: Esc НЕ прячет окно, Ctrl+= увеличивает кегль', async () => {
   const { app, page } = launched;
   await mainInvoke(app, 'executeCommand', { type: 'show-window' });
   const before = (await mainState(app)).fontSize;
@@ -143,10 +165,22 @@ test('реальные клавиши в окне: Esc прячет окно, Ct
     .toBe(before + 1);
   await expect(page.locator('.toast').last()).toContainText('Размер шрифта');
 
+  // Esc на пустом окне ничего не делает: окно остаётся видимым.
   await page.keyboard.press('Escape');
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect((await mainState(app)).windowVisible).toBe(true);
+
+  // Скрытие — только тогл-хоткеем.
+  const toggle = (await mainState(app)).accelerators['toggle-window'];
+  await mainInvoke(app, 'dispatchAccelerator', toggle);
   await expect
     .poll(async () => (await mainState(app)).windowVisible)
     .toBe(false);
+  // Тот же хоткей возвращает окно — «одна и та же комбинация».
+  await mainInvoke(app, 'dispatchAccelerator', toggle);
+  await expect
+    .poll(async () => (await mainState(app)).windowVisible)
+    .toBe(true);
 });
 
 test('реальный Ctrl+O открывает симулированный выбор файла', async () => {

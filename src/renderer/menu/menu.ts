@@ -1,10 +1,5 @@
 import { MenuItemModel, MenuController } from './MenuController';
-import {
-  ACCELERATORS,
-  SPEED_ACCELERATORS,
-  AppCommand,
-  BroadcastState,
-} from '../../shared/contracts';
+import { ACCELERATORS, AppCommand, BroadcastState } from '../../shared/contracts';
 
 const SPEED_LABELS: Record<string, string> = {
   slow: 'Медленно',
@@ -49,7 +44,7 @@ export function buildMenuItems(state: BroadcastState): MenuItemModel[] {
       id: `speed:${speed}`,
       kind: 'radio',
       label: SPEED_LABELS[speed],
-      accelerator: display(SPEED_ACCELERATORS[speed]),
+      accelerator: display(state.speedAccelerators[speed]),
       checked: state.autoScrollSpeed === speed,
     });
   }

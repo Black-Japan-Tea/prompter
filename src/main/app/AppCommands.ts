@@ -57,6 +57,7 @@ export interface TrayStateSource {
   captureProtectionEnabled(): boolean;
   recentFiles(): readonly string[];
   accelerators(): Partial<Record<AppCommandType, string>>;
+  speedAccelerators(): Record<AutoScrollSpeed, string>;
 }
 
 export function trayActionsFrom(
@@ -83,6 +84,7 @@ export function trayActionsFrom(
     captureProtectionEnabled: () => state.captureProtectionEnabled(),
     toggleCaptureProtection: () => app.toggleCaptureProtection(),
     accelerators: () => state.accelerators(),
+    speedAccelerators: () => state.speedAccelerators(),
     quit: () => app.quit(),
   };
 }

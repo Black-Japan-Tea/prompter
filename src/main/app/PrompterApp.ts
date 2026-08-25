@@ -16,6 +16,7 @@ import {
   ACCELERATORS,
   ACCELERATOR_FALLBACKS,
   SPEED_ACCELERATORS,
+  SPEED_ACCELERATOR_FALLBACKS,
 } from '../../shared/contracts';
 import { AppCommandTarget, executeCommand } from './commands';
 import { trayActionsFrom, chooseAccelerator } from './AppCommands';
@@ -32,6 +33,8 @@ export class PrompterApp implements AppCommandTarget {
   private readonly doc: DocumentController;
   /** Активные хоткеи после разрешения конфликтов с другими программами. */
   private activeAccelerators: Partial<Record<AppCommandType, string>> = {};
+  /** Активные хоткеи скоростей (с фолбэками). */
+  private speedAccelerators: Record<AutoScrollSpeed, string> = { ...SPEED_ACCELERATORS };
 
   constructor() {
     this.settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
@@ -107,18 +110,28 @@ export class PrompterApp implements AppCommandTarget {
       }
     }
 
-    // Скорости — три отдельные комбинации, фолбэков не имеют.
+    // Скорости — три отдельные комбинации с собственными фолбэками.
     for (const speed of ['slow', 'medium', 'fast'] as AutoScrollSpeed[]) {
-      const accelerator = SPEED_ACCELERATORS[speed];
-      const ok =
-        this.shortcuts.register({ [accelerator]: () => this.setAutoScrollSpeed(speed) })
-          .length === 0;
-      if (ok) {
-        taken.add(accelerator);
-        this.activeAccelerators['autoscroll-speed'] = 'Control+Alt+1..3';
-      } else {
+      const handler = (): void => this.setAutoScrollSpeed(speed);
+      const isFree = (accelerator: string): boolean =>
+        this.shortcuts.register({ [accelerator]: handler }).length === 0;
+      const chosen = chooseAccelerator(
+        SPEED_ACCELERATORS[speed],
+        SPEED_ACCELERATOR_FALLBACKS[speed],
+        isFree,
+        taken,
+      );
+      if (chosen === null) {
         failed.push('autoscroll-speed');
+        continue;
       }
+      taken.add(chosen);
+      this.speedAccelerators[speed] = chosen;
+      this.activeAccelerators['autoscroll-speed'] = [
+        this.speedAccelerators.slow,
+        this.speedAccelerators.medium,
+        this.speedAccelerators.fast,
+      ].join(' / ');
     }
 
     if (remapped.length > 0) {
@@ -306,6 +319,7 @@ export class PrompterApp implements AppCommandTarget {
       captureProtection: s.captureProtection,
       recentFiles: this.doc.recentList(),
       accelerators: this.activeAccelerators,
+      speedAccelerators: this.speedAccelerators,
     };
   }
 
@@ -318,6 +332,7 @@ export class PrompterApp implements AppCommandTarget {
       captureProtectionEnabled: () => this.settings.load().captureProtection,
       recentFiles: () => this.doc.recentList(),
       accelerators: () => this.activeAccelerators,
+      speedAccelerators: () => this.speedAccelerators,
     };
   }
 

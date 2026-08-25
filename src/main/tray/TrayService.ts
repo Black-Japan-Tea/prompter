@@ -1,10 +1,6 @@
 import { Menu, Tray, nativeImage } from 'electron';
 import { AutoScrollSpeed } from '../../shared/settings';
-import {
-  ACCELERATORS,
-  SPEED_ACCELERATORS,
-  AppCommandType,
-} from '../../shared/contracts';
+import { ACCELERATORS, AppCommandType } from '../../shared/contracts';
 
 /** Действия, которые меню трея запрашивает у приложения. */
 export interface TrayActions {
@@ -27,6 +23,7 @@ export interface TrayActions {
   captureProtectionEnabled(): boolean;
   toggleCaptureProtection(): void;
   accelerators(): Partial<Record<AppCommandType, string>>;
+  speedAccelerators(): Record<AutoScrollSpeed, string>;
   quit(): void;
 }
 
@@ -141,7 +138,7 @@ export class TrayService {
           label: SPEED_LABELS[speed],
           type: 'radio' as const,
           checked: this.actions.autoScrollSpeed() === speed,
-          accelerator: SPEED_ACCELERATORS[speed],
+          accelerator: this.actions.speedAccelerators()[speed],
           click: (): void => this.actions.setAutoScrollSpeed(speed),
         })),
       },

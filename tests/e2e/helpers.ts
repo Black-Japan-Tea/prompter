@@ -17,6 +17,8 @@ export interface AppState {
   fileName: string | null;
   registeredShortcuts: string[];
   accelerators: Record<string, string>;
+  captureProtection: boolean;
+  speedAccelerators: Record<string, string>;
 }
 
 export interface LaunchedApp {

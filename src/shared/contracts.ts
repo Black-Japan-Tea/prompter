@@ -103,11 +103,18 @@ export const ACCELERATORS: Record<AppCommandType, string> = {
   quit: 'Control+Alt+Q',
 };
 
-/** Реальные регистрируемые акселераторы выбора скорости (составная команда). */
+/** Реальные первичные акселераторы выбора скорости (составная команда). */
 export const SPEED_ACCELERATORS: Record<AutoScrollSpeed, string> = {
   slow: 'Control+Alt+1',
   medium: 'Control+Alt+2',
   fast: 'Control+Alt+3',
+};
+
+/** Фолбэки для скоростей: Alt+цифра часто занята системными переключателями. */
+export const SPEED_ACCELERATOR_FALLBACKS: Record<AutoScrollSpeed, readonly string[]> = {
+  slow: ['Control+Shift+Alt+1'],
+  medium: ['Control+Shift+Alt+2'],
+  fast: ['Control+Shift+Alt+3'],
 };
 
 /**
@@ -147,6 +154,8 @@ export interface BroadcastState {
   recentFiles: readonly string[];
   /** Активные хоткеи с учётом фолбэков: «что реально работает сейчас». */
   accelerators: Partial<Record<AppCommandType, string>>;
+  /** Активные хоткеи скоростей (могли уехать на фолбэки). */
+  speedAccelerators: Record<AutoScrollSpeed, string>;
 }
 
 /** API, которое preload выставляет в renderer через contextBridge. */

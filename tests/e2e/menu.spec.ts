@@ -39,12 +39,14 @@ test('меню открывается по кнопке ☰ с корректн�
 
   await expect(page.locator('#btn-menu')).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('#menu')).toHaveAttribute('role', 'menu');
-  await expect(page.locator('.menu-item[role="menuitemcheckbox"]')).toHaveCount(3);
+  await expect(page.locator('.menu-item[role="menuitemcheckbox"]')).toHaveCount(4);
   await expect(page.locator('.menu-item[role="menuitemradio"]')).toHaveCount(3);
 
   const open = page.locator('.menu-item[data-id="open"]');
   await expect(open).toContainText('Открыть файл…');
-  await expect(open).toContainText('Ctrl+Alt+O');
+  // Подпись хоткея — фактическая (может быть фолбэком при конфликте).
+  const activeOpenKey = (await mainState(launched.app)).accelerators['open-file'];
+  await expect(open).toContainText(activeOpenKey.replaceAll('Control', 'Ctrl'));
 
   await expect(page.locator('.menu-item[data-id="always-top"]')).toHaveAttribute(
     'aria-checked',
@@ -159,12 +161,48 @@ test('пункт «Спрятать окно» скрывает окно', async
   await mainInvoke(launched.app, 'executeCommand', { type: 'show-window' });
 });
 
+test('кнопки шапки (меню/свернуть/закрыть) видимы всегда, ✕ скрывает окно', async () => {  const { page, app } = launched;
+  for (const id of ['btn-menu', 'btn-hide', 'btn-quit']) {
+    const opacity = await page.locator(`#${id}`).evaluate(
+      (el) => getComputedStyle(el).opacity,
+    );
+    expect(Number(opacity), `кнопка #${id} невидима`).toBeGreaterThan(0.5);
+  }
+
+  await mainInvoke(app, 'executeCommand', { type: 'show-window' });
+  await page.locator('#btn-quit').click();
+  await expect
+    .poll(async () => (await mainState(app)).windowVisible)
+    .toBe(false);
+  await mainInvoke(app, 'executeCommand', { type: 'show-window' });
+});
+
+test('меню: тогл «Невидимо в трансляции» выключает и включает защиту', async () => {
+  const { page, app } = launched;
+  await openMenu();
+  const item = page.locator('.menu-item[data-id="capture-protection"]');
+  await expect(item).toHaveAttribute('aria-checked', 'true');
+  await item.click();
+
+  const off = await mainState(app);
+  expect(off.captureProtection).toBe(false);
+  expect(off.contentProtection).toBe(false);
+  await expect(page.locator('.toast').last()).toContainText('видно в трансляции');
+
+  await openMenu();
+  await expect(item).toHaveAttribute('aria-checked', 'false');
+  await item.click();
+  const on = await mainState(app);
+  expect(on.captureProtection).toBe(true);
+  expect(on.contentProtection).toBe(true);
+});
+
 test('клик-сквозь из меню выключается хоткеем — мышь снова работает', async () => {
   const { page, app } = launched;
   await openMenu();
   await page.locator('.menu-item[data-id="clickthrough"]').click();
   await expect((await mainState(app)).clickThrough).toBe(true);
-  await expect(page.locator('.toast')).toContainText('Клик-сквозь');
+  await expect(page.locator('.toast', { hasText: 'Клик-сквозь' })).toBeVisible();
 
   // Выключаем через реальный путь активного хоткея (может быть фолбэком).
   const key = (await mainState(app)).accelerators['clickthrough-toggle'];
