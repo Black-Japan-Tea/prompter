@@ -89,6 +89,130 @@ body.autoscroll-on .bar:hover { opacity: 1; }
 
 .controls { display: flex; gap: 4px; -webkit-app-region: no-drag; }
 
+.btn-menu {
+  width: 30px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  opacity: 0.85;
+}
+
+.btn-menu:hover, .btn-menu:focus-visible, .btn-menu[aria-expanded='true'] {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  opacity: 1;
+}
+
+/* ── Меню окна ─────────────────────────────────────────────────── */
+.menu {
+  position: absolute;
+  top: 40px;
+  left: 8px;
+  z-index: 40;
+  min-width: 240px;
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(26, 29, 36, 0.98);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover, .menu-item:focus-visible {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.35), rgba(139, 92, 246, 0.35));
+  outline: none;
+}
+
+.menu-item:disabled {
+  color: var(--muted);
+  opacity: 0.45;
+  cursor: default;
+  background: transparent;
+}
+
+.menu-item[aria-checked='true'] .menu-label::before {
+  content: '✓ ';
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.menu-item[role='menuitemradio'][aria-checked='true'] .menu-label::before {
+  content: '● ';
+  font-size: 9px;
+  vertical-align: 12%;
+}
+
+.menu-accel {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 5px 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Тосты ─────────────────────────────────────────────────────── */
+.toasts {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.toast {
+  max-width: 86%;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: var(--text);
+  background: rgba(28, 31, 38, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  pointer-events: auto;
+  animation: toast-in 0.16s ease;
+}
+
+.toast-error {
+  color: #ffc9cb;
+  border-color: rgba(229, 72, 77, 0.55);
+  background: rgba(64, 24, 26, 0.96);
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .btn {
   width: 26px;
   height: 26px;

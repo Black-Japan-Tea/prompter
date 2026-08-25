@@ -1,5 +1,6 @@
 import { Menu, Tray, nativeImage } from 'electron';
 import { AutoScrollSpeed } from '../../shared/settings';
+import { ACCELERATORS, SPEED_ACCELERATORS } from '../../shared/contracts';
 
 /** Действия, которые меню трея запрашивает у приложения. */
 export interface TrayActions {
@@ -15,6 +16,8 @@ export interface TrayActions {
   setAutoScrollSpeed(speed: AutoScrollSpeed): void;
   clickThroughEnabled(): boolean;
   toggleClickThrough(): void;
+  alwaysTopEnabled(): boolean;
+  toggleAlwaysTop(): void;
   quit(): void;
 }
 
@@ -24,7 +27,7 @@ const SPEED_LABELS: Record<AutoScrollSpeed, string> = {
   fast: 'Быстро',
 };
 
-/** Иконка в трее с полным меню управления суфлёром. */
+/** Иконка в трее с полным меню управления суфлёром (с подписями хоткеев). */
 export class TrayService {
   private readonly tray: Tray;
   private readonly icon: Electron.NativeImage;
@@ -43,6 +46,11 @@ export class TrayService {
     this.tray.setContextMenu(this.buildMenu());
   }
 
+  /** Жив ли системный трей (для диагностики и E2E). */
+  get isAlive(): boolean {
+    return !this.tray.isDestroyed();
+  }
+
   showStartupHint(): void {
     if (typeof this.tray.displayBalloon !== 'function') {
       return;
@@ -59,29 +67,55 @@ export class TrayService {
     }
   }
 
+  destroy(): void {
+    this.tray.destroy();
+  }
+
   private buildMenu(): Menu {
-    const recent = this.actions.recentFiles().map((path) => ({
+    const recent = this.actions.recentFiles().slice(0, 10).map((path) => ({
       label: baseName(path),
       click: (): void => this.actions.openRecent(path),
     }));
 
     return Menu.buildFromTemplate([
-      { label: 'Показать / Скрыть', click: () => this.actions.toggleWindow() },
+      {
+        label: 'Показать / Скрыть',
+        accelerator: ACCELERATORS['toggle-window'],
+        click: (): void => this.actions.toggleWindow(),
+      },
       { type: 'separator' },
-      { label: 'Открыть файл…', click: () => this.actions.openFile() },
+      {
+        label: 'Открыть файл…',
+        accelerator: ACCELERATORS['open-file'],
+        click: (): void => this.actions.openFile(),
+      },
+      {
+        label: 'Последний файл',
+        accelerator: ACCELERATORS['repeat-last-file'],
+        click: (): void => this.actions.openRecent(this.actions.recentFiles()[0] ?? ''),
+      },
       {
         label: 'Недавние',
         submenu: recent.length > 0 ? recent : [{ label: 'Пусто', enabled: false }],
       },
       { type: 'separator' },
-      { label: 'Прозрачность +', click: () => this.actions.opacityStepUp() },
-      { label: 'Прозрачность −', click: () => this.actions.opacityStepDown() },
+      {
+        label: 'Прозрачность +',
+        accelerator: ACCELERATORS['opacity-up'],
+        click: (): void => this.actions.opacityStepUp(),
+      },
+      {
+        label: 'Прозрачность −',
+        accelerator: ACCELERATORS['opacity-down'],
+        click: (): void => this.actions.opacityStepDown(),
+      },
       { type: 'separator' },
       {
         label: 'Автопрокрутка',
         type: 'checkbox',
         checked: this.actions.autoScrollEnabled(),
-        click: () => this.actions.toggleAutoScroll(),
+        accelerator: ACCELERATORS['autoscroll-toggle'],
+        click: (): void => this.actions.toggleAutoScroll(),
       },
       {
         label: 'Скорость прокрутки',
@@ -89,6 +123,7 @@ export class TrayService {
           label: SPEED_LABELS[speed],
           type: 'radio' as const,
           checked: this.actions.autoScrollSpeed() === speed,
+          accelerator: SPEED_ACCELERATORS[speed],
           click: (): void => this.actions.setAutoScrollSpeed(speed),
         })),
       },
@@ -96,20 +131,28 @@ export class TrayService {
         label: 'Клик-сквозь',
         type: 'checkbox',
         checked: this.actions.clickThroughEnabled(),
-        click: () => this.actions.toggleClickThrough(),
+        accelerator: ACCELERATORS['clickthrough-toggle'],
+        click: (): void => this.actions.toggleClickThrough(),
+      },
+      {
+        label: 'Поверх всех окон',
+        type: 'checkbox',
+        checked: this.actions.alwaysTopEnabled(),
+        accelerator: ACCELERATORS['always-top-toggle'],
+        click: (): void => this.actions.toggleAlwaysTop(),
       },
       { type: 'separator' },
-      { label: 'Выход', click: () => this.actions.quit() },
+      {
+        label: 'Спрятать окно',
+        accelerator: ACCELERATORS['hide-window'],
+        click: (): void => this.actions.toggleWindow(),
+      },
+      {
+        label: 'Выход',
+        accelerator: ACCELERATORS['quit'],
+        click: (): void => this.actions.quit(),
+      },
     ]);
-  }
-
-  /** Жив ли системный трей (для диагностики и E2E). */
-  get isAlive(): boolean {
-    return !this.tray.isDestroyed();
-  }
-
-  destroy(): void {
-    this.tray.destroy();
   }
 }
 

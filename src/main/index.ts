@@ -1,6 +1,6 @@
 import { app } from 'electron';
 import { PrompterApp } from './app/PrompterApp';
-import { AutoScrollSpeed } from '../shared/settings';
+import { AppCommand, ACCELERATORS } from '../shared/contracts';
 
 let prompter: PrompterApp | null = null;
 
@@ -39,10 +39,10 @@ function installTestHooks(instance: PrompterApp): void {
   (globalThis as unknown as Record<string, unknown>).__prompterTest = {
     toggleWindow: (): void => instance.toggleWindow(),
     openFile: (path: string): void => instance.openFile(path),
-    toggleAutoScroll: (): void => instance.toggleAutoScrollForTests(),
-    setAutoScrollSpeed: (speed: AutoScrollSpeed): void =>
-      instance.setAutoScrollSpeedForTests(speed),
-    stepOpacity: (direction: 'up' | 'down'): void => instance.stepOpacityForTests(direction),
+    executeCommand: (command: AppCommand): void => instance.executeCommandForTests(command),
+    dispatchAccelerator: (accelerator: string): void => instance.dispatchAccelerator(accelerator),
+    simulateNextPick: (path: string | null): void => instance.simulateNextPick(path),
     state: (): unknown => instance.debugState(),
+    accelerators: (): Record<string, string> => ACCELERATORS,
   };
 }

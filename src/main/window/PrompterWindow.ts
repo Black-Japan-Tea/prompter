@@ -39,7 +39,7 @@ export class PrompterWindow {
       },
     });
 
-    this.win.setAlwaysOnTop(true, 'screen-saver');
+    this.win.setAlwaysOnTop(settings.alwaysOnTop, 'screen-saver');
     this.applyContentProtection();
     // Крестик и системные жесты не убивают приложение — только прячут окно.
     // При настоящем выходе (prepareForQuit) закрытие разрешаем.
@@ -100,6 +100,14 @@ export class PrompterWindow {
   setClickThrough(enabled: boolean): void {
     // forward:true оставляет окну события движения мыши для hover-эффектов.
     this.win.setIgnoreMouseEvents(enabled, { forward: true });
+  }
+
+  setAlwaysOnTopEnabled(enabled: boolean): void {
+    this.win.setAlwaysOnTop(enabled, 'screen-saver');
+  }
+
+  get isAlwaysOnTop(): boolean {
+    return this.win.isAlwaysOnTop();
   }
 
   bounds(): AppSettings['windowBounds'] {

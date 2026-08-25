@@ -15,7 +15,7 @@ export interface MenuItemModel {
  */
 export class MenuController {
   private items: MenuItemModel[];
-  private open = false;
+  private opened = false;
   private focusedIndex = -1;
 
   constructor(items: MenuItemModel[]) {
@@ -23,7 +23,7 @@ export class MenuController {
   }
 
   get isOpen(): boolean {
-    return this.open;
+    return this.opened;
   }
 
   get focusedId(): string | null {
@@ -35,26 +35,26 @@ export class MenuController {
     if (this.focusedIndex >= this.items.length) {
       this.focusedIndex = this.items.length - 1;
     }
-    if (this.open && this.focusedIndex < 0) {
+    if (this.opened && this.focusedIndex < 0) {
       this.focusFirstAvailable();
     }
   }
 
-  openMenu(): void {
-    this.open = true;
+  open(): void {
+    this.opened = true;
     this.focusFirstAvailable();
   }
 
   close(): void {
-    this.open = false;
+    this.opened = false;
     this.focusedIndex = -1;
   }
 
   toggle(): void {
-    if (this.open) {
+    if (this.opened) {
       this.close();
     } else {
-      this.openMenu();
+      this.open();
     }
   }
 

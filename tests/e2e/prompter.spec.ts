@@ -183,12 +183,12 @@ test('5. правка файла на диске обновляет контен
 test('6. прозрачность шагами меняется и отражается в шапке', async () => {
   const before = (await mainState()).opacity;
 
-  await mainInvoke('stepOpacity', 'down');
+  await mainInvoke('executeCommand', { type: 'opacity-down' });
   const after = (await mainState()).opacity;
   expect(Math.round((before - after) * 100)).toBe(10);
   await expect(page.locator('#badge-opacity')).toContainText(`${Math.round(after * 100)}%`);
 
-  await mainInvoke('stepOpacity', 'up');
+  await mainInvoke('executeCommand', { type: 'opacity-up' });
   expect((await mainState()).opacity).toBe(before);
 });
 
@@ -200,10 +200,10 @@ test('7. автопрокрутка включается тоглом и ско�
   await mainInvoke('openFile', scrollPath);
   await expect(page.locator('#content h1')).toHaveText('Скролл');
 
-  await mainInvoke('setAutoScrollSpeed', 'fast');
+  await mainInvoke('executeCommand', { type: 'autoscroll-speed', speed: 'fast' });
   // rAF троттлится в скрытом окне — показываем, как это бывает у живого пользователя.
   await mainInvoke('toggleWindow');
-  await mainInvoke('toggleAutoScroll');
+  await mainInvoke('executeCommand', { type: 'autoscroll-toggle' });
   await expect(page.locator('#badge-autoscroll')).toBeVisible();
   await expect(page.locator('body')).toHaveClass(/autoscroll-on/);
 
@@ -211,7 +211,7 @@ test('7. автопрокрутка включается тоглом и ско�
   const scrollTopFast = await page.evaluate(() => document.getElementById('viewer')?.scrollTop ?? 0);
   expect(scrollTopFast).toBeGreaterThan(40);
 
-  await mainInvoke('toggleAutoScroll');
+  await mainInvoke('executeCommand', { type: 'autoscroll-toggle' });
   await mainInvoke('toggleWindow');
   expect((await mainState()).autoScrollEnabled).toBe(false);
 });

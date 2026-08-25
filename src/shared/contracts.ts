@@ -12,6 +12,7 @@ export const IPC = {
   quitRequest: 'prompter:quit-request',
   command: 'prompter:command',
   notify: 'prompter:notify',
+  requestState: 'prompter:request-state',
 } as const;
 
 /** Полное содержимое файла при открытии. */
@@ -80,6 +81,13 @@ export const ACCELERATORS: Record<AppCommandType, string> = {
   quit: 'Control+Alt+Q',
 };
 
+/** Реальные регистрируемые акселераторы выбора скорости (составная команда). */
+export const SPEED_ACCELERATORS: Record<AutoScrollSpeed, string> = {
+  slow: 'Control+Alt+1',
+  medium: 'Control+Alt+2',
+  fast: 'Control+Alt+3',
+};
+
 /** Сообщения для тостов: ошибки и важные события из main. */
 export interface NotifyPayload {
   level: 'info' | 'error';
@@ -110,6 +118,8 @@ export interface PrompterApi {
   runCommand(command: AppCommand): void;
   hideWindow(): void;
   quit(): void;
+  /** Первоначальный запрос состояния после подписок renderer. */
+  requestState(): void;
   /** Путь файла из drag&drop: в современном Electron только так. */
   filePathFor(file: File): string;
 }
