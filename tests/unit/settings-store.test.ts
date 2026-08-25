@@ -123,4 +123,16 @@ describe('SettingsStore', () => {
   it('дефолт alwaysOnTop — true', () => {
     expect(DEFAULT_SETTINGS.alwaysOnTop).toBe(true);
   });
+
+  it('сохраняет и возвращает флаг защиты от захвата', () => {
+    const path = settingsPath();
+    const store = new SettingsStore(path);
+    store.update({ captureProtection: false });
+
+    expect(new SettingsStore(path).load().captureProtection).toBe(false);
+  });
+
+  it('дефолт captureProtection — true (окно скрыто от трансляции)', () => {
+    expect(DEFAULT_SETTINGS.captureProtection).toBe(true);
+  });
 });

@@ -3,6 +3,7 @@ import {
   AppCommand,
   ACCELERATORS,
   COMMAND_TYPES,
+  HOTKEYED_COMMAND_TYPES,
 } from '../../src/shared/contracts';
 import { parseCommandPayload } from '../../src/main/app/commands';
 
@@ -20,6 +21,18 @@ describe('ACCELERATORS — у каждой команды есть хоткей'
     const values = Object.values(ACCELERATORS);
     expect(new Set(values).size).toBe(values.length);
   });
+
+  it('показ и скрытие НЕ имеют отдельных хоткеев — только тогл одной комбинацией', () => {
+    // Отдельные show/hide остаются служебными командами меню и internal-кода.
+    expect(HOTKEYED_COMMAND_TYPES).not.toContain('show-window');
+    expect(HOTKEYED_COMMAND_TYPES).not.toContain('hide-window');
+    expect(HOTKEYED_COMMAND_TYPES).toContain('toggle-window');
+  });
+
+  it('тогл невидимости в трансляции имеет хоткей', () => {
+    expect(ACCELERATORS['capture-protection-toggle']).toBeTruthy();
+    expect(HOTKEYED_COMMAND_TYPES).toContain('capture-protection-toggle');
+  });
 });
 
 describe('parseCommandPayload — строгая валидация входа IPC', () => {
@@ -32,6 +45,9 @@ describe('parseCommandPayload — строгая валидация входа I
     expect(parseCommandPayload({ type: 'open-recent', path: 'C:/a.md' })).toEqual({
       type: 'open-recent',
       path: 'C:/a.md',
+    });
+    expect(parseCommandPayload({ type: 'capture-protection-toggle' })).toEqual({
+      type: 'capture-protection-toggle',
     });
   });
 
