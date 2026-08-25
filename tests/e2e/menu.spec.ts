@@ -65,8 +65,8 @@ test('клик по пункту исполняет команду, закрыв
   await page.locator('.menu-item[data-id="opacity-up"]').click();
 
   await expect(page.locator('#menu')).toBeHidden();
-  await expect(page.locator('.toast')).toContainText('Прозрачность 95%');
-  await expect((await mainState(launched.app)).opacity).toBe(0.95);
+  await expect(page.locator('.toast')).toContainText('Прозрачность 25%');
+  await expect((await mainState(launched.app)).opacity).toBe(0.75);
 });
 
 test('чекбокс автопрокрутки синхронизирован с состоянием', async () => {
@@ -208,6 +208,49 @@ test('клик-сквозь из меню выключается хоткеем 
   const key = (await mainState(app)).accelerators['clickthrough-toggle'];
   await mainInvoke(app, 'dispatchAccelerator', key);
   await expect((await mainState(app)).clickThrough).toBe(false);
+});
+
+test('скроллбар: фиолетовая полоса 10px, ховер оживляет зону, drag скроллит', async () => {
+  const { page, app } = launched;
+  const longPath = join(workDir, 'long.md');
+  const paragraphs = Array.from({ length: 60 }, (_, i) => `Абзац ${i} длинного текста.`);
+  writeFileSync(longPath, `# Длинный документ\n\n${paragraphs.join('\n\n')}`, 'utf8');
+  await mainInvoke(app, 'openFile', longPath);
+  await expect(page.locator('#content h1')).toHaveText('Длинный документ');
+
+  // Полоса едина со скроллбаром: толщина 10px.
+  const railWidth = await page
+    .locator('#rail')
+    .evaluate((el) => el.getBoundingClientRect().width);
+  expect(Math.round(railWidth)).toBe(10);
+
+  // Позиция полосы растёт при прокрутке — «насколько прокрутил».
+  const topBefore = await page.evaluate(
+    () => Number(document.getElementById('rail-thumb').style.top.replace('px', '')) || 0,
+  );
+  await page.locator('#viewer').evaluate((el) => {
+    el.scrollTop = el.scrollHeight / 2;
+  });
+  await page.waitForTimeout(120);
+  const topAfter = await page.evaluate(
+    () => Number(document.getElementById('rail-thumb').style.top.replace('px', '')) || 0,
+  );
+  expect(topAfter).toBeGreaterThan(topBefore);
+
+  // Наведение в правой зоне проявляет конструкцию (трек оживает).
+  const hitBox = await page.locator('#rail-hit').boundingBox();
+  expect(hitBox).not.toBeNull();
+  const box = hitBox as { x: number; y: number; width: number; height: number };
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.locator('#rail')).toHaveClass(/hit-active/);
+
+  // Drag по зоне скроллит документ — функциональность скроллбара на месте.
+  const scrollBefore = await page.evaluate(() => document.getElementById('viewer').scrollTop);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.15, { steps: 5 });
+  await page.mouse.up();
+  const scrollAfter = await page.evaluate(() => document.getElementById('viewer').scrollTop);
+  expect(Math.abs(scrollAfter - scrollBefore)).toBeGreaterThan(50);
 });
 
 function cssEscape(value: string): string {

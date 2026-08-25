@@ -32,7 +32,9 @@ export class Header {
   }
 
   update(state: BroadcastState): void {
-    this.opacity.textContent = `◐ ${Math.round(state.opacity * 100)}%`;
+    // Шкала пользователя: 0% — непрозрачно, 95% — почти прозрачное окно.
+    const transparency = Math.round((1 - state.opacity) * 100);
+    this.opacity.textContent = `◐ ${transparency}%`;
     this.opacity.hidden = false;
     this.autoscroll.hidden = !state.autoScrollEnabled;
     document.body.classList.toggle('autoscroll-on', state.autoScrollEnabled);

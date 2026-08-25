@@ -183,10 +183,11 @@ test('5. правка файла на диске обновляет контен
 test('6. прозрачность шагами меняется и отражается в шапке', async () => {
   const before = (await mainState()).opacity;
 
+  // opacity-down = меньше прозрачности = окно плотнее (непрозрачность +0.1).
   await mainInvoke('executeCommand', { type: 'opacity-down' });
   const after = (await mainState()).opacity;
-  expect(Math.round((before - after) * 100)).toBe(10);
-  await expect(page.locator('#badge-opacity')).toContainText(`${Math.round(after * 100)}%`);
+  expect(Math.round((after - before) * 100)).toBe(10);
+  await expect(page.locator('#badge-opacity')).toContainText(`${Math.round((1 - after) * 100)}%`);
 
   await mainInvoke('executeCommand', { type: 'opacity-up' });
   expect((await mainState()).opacity).toBe(before);

@@ -66,10 +66,14 @@ window.prompter.onStateChanged((state) => {
   previousState = state;
 });
 
-// Прогресс чтения: бейдж в шапке + рейка автопрокрутки у правого края.
+// Единая фиолетовая конструкция у правого края: полоска-позиция «насколько
+// прокрутил» видна всегда; при наведении в зоне проявляется трек и работает
+// перетаскивание (нативный скроллбар скрыт полностью).
 const rail = requireElement('rail');
-const railFill = requireElement('rail-fill');
+const railThumb = requireElement('rail-thumb');
+const railHit = requireElement('rail-hit');
 viewerEl.addEventListener('scroll', updateProgress);
+initRailScrub(viewerEl, rail, railThumb, railHit);
 updateProgress();
 
 // Ctrl+колесо — кегль текста, сохраняется в настройках.
@@ -103,10 +107,62 @@ function currentFontSize(): number {
 
 function updateProgress(): void {
   const scrollable = viewerEl.scrollHeight - viewerEl.clientHeight;
-  const ratio = scrollable <= 0 ? 1 : viewerEl.scrollTop / scrollable;
+  const ratio = scrollable <= 0 ? 1 : Math.min(1, Math.max(0, viewerEl.scrollTop / scrollable));
   header.setProgress(ratio);
   rail.hidden = false;
-  railFill.style.height = `${Math.round(Math.min(1, Math.max(0, ratio)) * 100)}%`;
+
+  // Тумб: размер = доля видимой части документа, позиция = прогресс чтения.
+  const railHeight = rail.clientHeight;
+  const thumbHeight = Math.max(
+    24,
+    Math.round((viewerEl.clientHeight / viewerEl.scrollHeight) * railHeight),
+  );
+  railThumb.style.height = `${thumbHeight}px`;
+  railThumb.style.top = `${Math.round(ratio * (railHeight - thumbHeight))}px`;
+}
+
+/** Перетаскивание/клик по зоне рейки скроллит документ (замена тумба). */
+function initRailScrub(
+  viewer: HTMLElement,
+  railEl: HTMLElement,
+  thumb: HTMLElement,
+  hit: HTMLElement,
+): void {
+  let dragging = false;
+
+  const scrollToPointer = (clientY: number): void => {
+    const rect = railEl.getBoundingClientRect();
+    const thumbHeight = thumb.offsetHeight || 24;
+    const usable = rect.height - thumbHeight;
+    if (usable <= 0) {
+      return;
+    }
+    const position = Math.min(
+      1,
+      Math.max(0, (clientY - rect.top - thumbHeight / 2) / usable),
+    );
+    viewer.scrollTop = position * (viewer.scrollHeight - viewer.clientHeight);
+  };
+
+  hit.addEventListener('pointerdown', (event) => {
+    dragging = true;
+    hit.setPointerCapture(event.pointerId);
+    scrollToPointer(event.clientY);
+  });
+  hit.addEventListener('pointermove', (event) => {
+    if (dragging) {
+      scrollToPointer(event.clientY);
+    }
+  });
+  const release = (): void => {
+    dragging = false;
+  };
+  hit.addEventListener('pointerup', release);
+  hit.addEventListener('pointercancel', release);
+
+  // Проявление скроллбара при наведении в зоне.
+  hit.addEventListener('mouseenter', () => railEl.classList.add('hit-active'));
+  hit.addEventListener('mouseleave', () => railEl.classList.remove('hit-active'));
 }
 
 const SPEED_TOAST: Record<string, string> = {
@@ -122,7 +178,13 @@ function announceChanges(state: BroadcastState): void {
     return;
   }
   if (state.opacity !== previous.opacity) {
-    toasts.show(`Прозрачность ${Math.round(state.opacity * 100)}%`);
+    // Шкала прозрачности: 0% — непрозрачно, максимум 95% — почти невидимо.
+    const transparency = Math.round((1 - state.opacity) * 100);
+    toasts.show(
+      transparency >= 95
+        ? 'Прозрачность 95% — почти невидимо'
+        : `Прозрачность ${transparency}%`,
+    );
   }
   if (state.autoScrollEnabled !== previous.autoScrollEnabled) {
     toasts.show(

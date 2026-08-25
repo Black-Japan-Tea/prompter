@@ -125,7 +125,7 @@ function checkInvariants(state: AppState, label: string): void {
   ).toBe(state.captureProtection);
   expect(state.skipTaskbar, `${label}: окно вылезло на панель задач!`).toBe(true);
   expect(state.trayAlive, `${label}: трей умер!`).toBe(true);
-  expect(state.opacity, `${label}: прозрачность вне диапазона`).toBeGreaterThanOrEqual(0.2);
+  expect(state.opacity, `${label}: прозрачность вне диапазона`).toBeGreaterThanOrEqual(0.05);
   expect(state.opacity, `${label}: прозрачность вне диапазона`).toBeLessThanOrEqual(1);
   expect(state.fontSize, `${label}: кегль вне диапазона`).toBeGreaterThanOrEqual(12);
   expect(state.fontSize, `${label}: кегль вне диапазона`).toBeLessThanOrEqual(28);

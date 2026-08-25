@@ -264,24 +264,51 @@ body.autoscroll-on .bar:hover { opacity: 1; }
 .empty-title { margin: 0; font-size: 15px; font-weight: 600; }
 .empty-hint { margin: 0; font-size: 12.5px; color: var(--muted); }
 
-/* ── Рейка автопрокрутки ──────────────────────────────────────── */
+/* ── Единая конструкция скроллбара ───────────────────────────────
+   Нативный скроллбар скрыт; у правого края живёт фиолетовая полоска-
+   позиция (10px, как скроллбар). При наведении в зоне проявляется
+   трек и перетаскивание — конструкция выглядит одним целым. */
+.viewer { scrollbar-width: none; }
+.viewer::-webkit-scrollbar { width: 0; height: 0; }
+
 .rail {
   position: absolute;
   top: 44px;
   right: 3px;
   bottom: 8px;
-  width: 3px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.06);
+  width: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  transition: background 0.15s ease;
 }
 
-.rail-fill {
-  width: 100%;
-  height: 0;
-  border-radius: 2px;
-  background: linear-gradient(180deg, var(--accent-from), var(--accent-to));
-  transition: height 0.15s linear;
+/* Ховер-зона шире рейки: курсор рядом — конструкция оживает
+   (класс вешает JS: чистый CSS не стилизует предыдущий сиблинг). */
+.rail-hit {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  bottom: 8px;
+  width: 16px;
+  cursor: grab;
+  z-index: 30;
 }
+
+.rail-hit:active { cursor: grabbing; }
+
+.rail.hit-active { background: rgba(255, 255, 255, 0.09); }
+
+.rail-thumb {
+  position: absolute;
+  left: 0;
+  width: 10px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, var(--accent-from), var(--accent-to));
+  opacity: 0.85;
+  transition: opacity 0.15s ease;
+}
+
+.rail.hit-active .rail-thumb { opacity: 1; }
 
 /* ── Markdown ─────────────────────────────────────────────────── */
 .md h1, .md h2, .md h3, .md h4 { line-height: 1.3; margin: 1.1em 0 0.45em; }

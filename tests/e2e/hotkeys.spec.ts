@@ -74,15 +74,15 @@ test('переключение окна работает через активн
   expect((await mainState(app)).windowVisible).toBe(false);
 });
 
-test('хоткей прозрачности вверх клэмпит на 100% и шлёт тост', async () => {
+test('хоткей прозрачности клэмпит на 95% (почти невидимо) и шлёт тост', async () => {
   const { app, page } = launched;
   const up = (await mainState(app)).accelerators['opacity-up'];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 12; i++) {
     await mainInvoke(app, 'dispatchAccelerator', up);
   }
   const state = await mainState(app);
-  expect(state.opacity).toBe(1);
-  await expect(page.locator('.toast').last()).toContainText('Прозрачность 100%');
+  expect(state.opacity).toBe(0.05);
+  await expect(page.locator('.toast').last()).toContainText('Прозрачность 95%');
 });
 
 test('хоткеи автопрокрутки и скорости включают быструю прокрутку', async () => {
