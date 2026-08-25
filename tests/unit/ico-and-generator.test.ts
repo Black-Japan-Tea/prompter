@@ -39,13 +39,14 @@ describe('assembleIco', () => {
       { size: 16, png: png16 },
       { size: 256, png: png256 },
     ]);
-    expect(ico.readUInt32LE(8)).toBe(1); // planes
-    expect(ico.readUInt32LE(12)).toBe(32); // bpp
-    const size0 = ico.readUInt32LE(16);
-    const offset0 = ico.readUInt32LE(20);
+    expect(ico.readUInt16LE(10)).toBe(1); // planes
+    expect(ico.readUInt16LE(12)).toBe(32); // bpp
+    const size0 = ico.readUInt32LE(14);
+    const offset0 = ico.readUInt32LE(18);
     expect(size0).toBe(png16.length);
     expect([...ico.subarray(offset0, offset0 + 8)]).toEqual(PNG_SIGNATURE);
-    const offset1 = ico.readUInt32LE(36);
+    // Вторая запись начинается после заголовка (6) + двух записей (2*16).
+    const offset1 = ico.readUInt32LE(6 + 16 + 12);
     expect(offset1).toBe(offset0 + png16.length);
     expect([...ico.subarray(offset1, offset1 + 8)]).toEqual(PNG_SIGNATURE);
   });
