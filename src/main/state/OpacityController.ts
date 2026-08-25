@@ -3,8 +3,8 @@ export interface OpacityView {
   setOpacity(value: number): void;
 }
 
-/** Границы прозрачности: ниже 0.2 текст уже нечитаем, выше 1 не бывает. */
-const MIN_OPACITY = 0.2;
+/** Границы: непрозрачность 0.05..1 — то есть прозрачность до 95% максимум. */
+const MIN_OPACITY = 0.05;
 const MAX_OPACITY = 1;
 const STEP = 0.1;
 const DEFAULT_OPACITY = 0.85;

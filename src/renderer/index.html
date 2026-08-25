@@ -10,10 +10,10 @@
   <div class="app" id="app">
     <header class="bar" id="bar">
       <button class="btn btn-menu" id="btn-menu" title="Меню (F10)" aria-haspopup="menu" aria-expanded="false">
-        <svg width="14" height="12" viewBox="0 0 14 12" aria-hidden="true">
-          <rect x="0" y="1" width="14" height="1.6" rx="0.8" fill="currentColor"/>
-          <rect x="0" y="5.2" width="14" height="1.6" rx="0.8" fill="currentColor"/>
-          <rect x="0" y="9.4" width="14" height="1.6" rx="0.8" fill="currentColor"/>
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+          <rect x="2" y="3" width="12" height="2" rx="1" fill="currentColor"/>
+          <rect x="2" y="7" width="12" height="2" rx="1" fill="currentColor"/>
+          <rect x="2" y="11" width="12" height="2" rx="1" fill="currentColor"/>
         </svg>
       </button>
       <span class="file" id="file-name">Файл не выбран</span>
@@ -23,8 +23,8 @@
         <span class="badge badge-accent" id="badge-autoscroll" hidden>▶ авто</span>
       </span>
       <span class="controls">
-        <button class="btn" id="btn-hide" title="Скрыть окно (Esc или Ctrl+Alt+P)">&ndash;</button>
-        <button class="btn btn-danger" id="btn-quit" title="Закрыть приложение (Ctrl+Q)">&times;</button>
+        <button class="btn" id="btn-hide" title="Скрыть окно (Ctrl+Alt+P)">&ndash;</button>
+        <button class="btn btn-danger" id="btn-quit" title="Скрыть окно (Ctrl+Alt+P)">&times;</button>
       </span>
     </header>
     <main class="viewer" id="viewer">
@@ -33,21 +33,24 @@
         <svg class="empty-icon" width="76" height="76" viewBox="0 0 64 64" aria-hidden="true">
           <defs>
             <linearGradient id="bubble-g" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#6366F1"/>
-              <stop offset="1" stop-color="#8B5CF6"/>
+              <stop offset="0" stop-color="#FD6500"/>
+              <stop offset="1" stop-color="#FF8A3A"/>
             </linearGradient>
           </defs>
           <rect x="4" y="6" width="56" height="42" rx="10" fill="url(#bubble-g)"/>
           <path d="M16 44 L16 57 L29 44 Z" fill="url(#bubble-g)"/>
-          <rect x="16" y="18" width="32" height="4" rx="2" fill="#E8EAF0"/>
-          <rect x="16" y="26" width="22" height="4" rx="2" fill="#E8EAF0"/>
-          <rect x="16" y="34" width="27" height="4" rx="2" fill="#E8EAF0"/>
+          <rect x="16" y="18" width="32" height="4" rx="2" fill="var(--bg)"/>
+          <rect x="16" y="26" width="22" height="4" rx="2" fill="var(--bg)"/>
+          <rect x="16" y="34" width="27" height="4" rx="2" fill="var(--bg)"/>
         </svg>
         <p class="empty-title">Перетащи .md сюда</p>
-        <p class="empty-hint">или открой: меню ☰ / F10 · Ctrl+Alt+O</p>
+        <p class="empty-hint">или открой через меню</p>
       </div>
     </main>
-    <div class="rail" id="rail" hidden><div class="rail-fill" id="rail-fill"></div></div>
+    <div class="rail" id="rail" hidden>
+      <div class="rail-thumb" id="rail-thumb"></div>
+    </div>
+    <div class="rail-hit" id="rail-hit" aria-hidden="true"></div>
     <nav class="menu" id="menu" role="menu" aria-label="Меню приложения" hidden></nav>
     <div class="toasts" id="toasts"></div>
   </div>

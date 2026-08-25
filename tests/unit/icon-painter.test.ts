@@ -19,7 +19,10 @@ function countWhere(image: RgbaImage, predicate: (p: [number, number, number, nu
   return count;
 }
 
-describe('paintIcon — форма и цвета', () => {
+const isDark = (p: [number, number, number, number]) => p[3] === 255 && p[0] < 60 && p[1] < 64 && p[2] < 70;
+const isOrange = (p: [number, number, number, number]) => p[3] === 255 && p[0] > 180 && p[2] < 130;
+
+describe('paintIcon — речевая выноска: тёмный фон, оранжевый бабл, тёмные строки', () => {
   const size = 64;
   const icon = paintIcon(size);
 
@@ -36,33 +39,65 @@ describe('paintIcon — форма и цвета', () => {
     expect(pixel(icon, size - 1, size - 1)[3]).toBe(0);
   });
 
-  it('центр непрозрачный', () => {
-    expect(pixel(icon, Math.floor(size / 2), Math.floor(size / 2))[3]).toBe(255);
+  it('фон квадрата — тёмный графит #1e2024', () => {
+    const corner = pixel(icon, 10, 10); // внутри квадрата, вне бабла и хвоста
+    expect(isDark(corner)).toBe(true);
+    const bottomRight = pixel(icon, Math.floor(size * 0.85), Math.floor(size * 0.85));
+    expect(isDark(bottomRight)).toBe(true);
   });
 
-  it('градиент: красный канал растёт от левого верхнего к правому нижнему', () => {
-    // Индиго (99,102,241) → фиолет (139,92,246): тёплого больше внизу справа.
-    const topLeft = pixel(icon, Math.floor(size * 0.2), Math.floor(size * 0.2));
-    const bottomRight = pixel(icon, Math.floor(size * 0.82), Math.floor(size * 0.82));
-    expect(bottomRight[0]).toBeGreaterThan(topLeft[0]);
-    expect(topLeft[2]).toBeGreaterThan(topLeft[0]); // синий доминирует в индиго
+  it('бабл — фирменный оранжевый, крупный', () => {
+    const onBubble = pixel(icon, 32, 17); // верх бабла над строками
+    expect(isOrange(onBubble)).toBe(true);
+    const share = countWhere(icon, isOrange) / (size * size);
+    expect(share).toBeGreaterThan(0.2);
   });
 
-  it('в иконке есть белые пиксели пузыря', () => {
+  it('строки текста внутри бабла — тёмные на оранжевом', () => {
+    // Внутри бабла (зона y 20..36) фон оранжевый: тёмное там — только строки.
+    let bars = 0;
+    for (let y = 20; y <= 36; y++) {
+      for (let x = 16; x <= 48; x++) {
+        if (isDark(pixel(icon, x, y))) {
+          bars++;
+        }
+      }
+    }
+    expect(bars).toBeGreaterThan(30);
+  });
+
+  it('белых пикселей больше нет', () => {
     const whites = countWhere(icon, ([r, g, b, a]) => a === 255 && r > 225 && g > 225 && b > 225);
-    expect(whites).toBeGreaterThan(50);
+    expect(whites).toBe(0);
   });
 
-  it('в иконке есть акцентные пиксели строк текста (синий доминирует)', () => {
-    const accents = countWhere(icon, ([r, , b, a]) => a === 255 && b > 200 && r < 180);
-    expect(accents).toBeGreaterThan(50);
+  it('хвост-указатель крупный: оранжевый клин глубоко вниз-влево', () => {
+    // Прежний хвост кончался на 0.72 высоты — заметный должен доставать ниже.
+    expect(isOrange(pixel(icon, 22, 45))).toBe(true); // основание хвоста
+    expect(isOrange(pixel(icon, 20, 48))).toBe(true); // середина клина
+  });
+
+  it('края сглажены суперсэмплингом: есть полупрозрачные пиксели', () => {
+    const semi = countWhere(icon, ([, , , a]) => a > 0 && a < 255);
+    expect(semi).toBeGreaterThan(20);
   });
 });
 
 describe('paintIcon — мелкие размеры', () => {
-  it('16px сохраняет форму: прозрачные углы и непрозрачный центр', () => {
+  it('16px читаем: тёмный угол, оранжевый бабл, тёмные строки', () => {
     const small = paintIcon(16);
-    expect(pixel(small, 0, 0)[3]).toBe(0);
-    expect(pixel(small, 8, 8)[3]).toBe(255);
+    expect(pixel(small, 0, 0)[3]).toBe(0); // скругление
+    expect(isDark(pixel(small, 12, 14))).toBe(true); // фон квадрата (правый низ)
+    expect(isOrange(pixel(small, 8, 4))).toBe(true); // бабл (выше первой строки)
+    // Строки видны и в трее: в центре бабла есть тёмные пиксели.
+    let bars = 0;
+    for (let y = 5; y <= 10; y++) {
+      for (let x = 5; x <= 11; x++) {
+        if (pixel(small, x, y)[0] < 90 && pixel(small, x, y)[3] === 255) {
+          bars++;
+        }
+      }
+    }
+    expect(bars).toBeGreaterThan(2);
   });
 });

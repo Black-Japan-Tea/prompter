@@ -5,6 +5,7 @@ import {
 } from '../../shared/contracts';
 import { AutoScrollSpeed } from '../../shared/settings';
 import { AppCommandTarget } from './commands';
+import type { TrayActions } from '../tray/TrayService';
 
 /**
  * Выбирает первый свободный акселератор из первичного и фолбэков.
@@ -34,8 +35,8 @@ export function buildGlobalBindings(app: AppCommandTarget): Record<string, () =>
     [ACCELERATORS['open-file']]: () => void app.openViaDialog(),
     [ACCELERATORS['open-recent']]: () => app.repeatLastFile(),
     [ACCELERATORS['repeat-last-file']]: () => app.repeatLastFile(),
-    [ACCELERATORS['opacity-up']]: () => app.opacityUp(),
-    [ACCELERATORS['opacity-down']]: () => app.opacityDown(),
+    [ACCELERATORS['opacity-up']]: () => app.transparencyUp(),
+    [ACCELERATORS['opacity-down']]: () => app.transparencyDown(),
     [ACCELERATORS['autoscroll-toggle']]: () => app.toggleAutoScroll(),
     [ACCELERATORS['clickthrough-toggle']]: () => app.toggleClickThrough(),
     [ACCELERATORS['always-top-toggle']]: () => app.toggleAlwaysOnTop(),
@@ -53,38 +54,25 @@ export interface TrayStateSource {
   autoScrollSpeed(): AutoScrollSpeed;
   clickThroughEnabled(): boolean;
   alwaysTopEnabled(): boolean;
+  captureProtectionEnabled(): boolean;
   recentFiles(): readonly string[];
   accelerators(): Partial<Record<AppCommandType, string>>;
+  speedAccelerators(): Record<AutoScrollSpeed, string>;
 }
 
 export function trayActionsFrom(
   app: AppCommandTarget,
   state: TrayStateSource,
-): {
-  toggleWindow(): void;
-  openFile(): void;
-  openRecent(path: string): void;
-  recentFiles(): readonly string[];
-  opacityStepUp(): void;
-  opacityStepDown(): void;
-  autoScrollEnabled(): boolean;
-  toggleAutoScroll(): void;
-  autoScrollSpeed(): AutoScrollSpeed;
-  setAutoScrollSpeed(speed: AutoScrollSpeed): void;
-  clickThroughEnabled(): boolean;
-  toggleClickThrough(): void;
-  alwaysTopEnabled(): boolean;
-  toggleAlwaysTop(): void;
-  accelerators(): Partial<Record<AppCommandType, string>>;
-  quit(): void;
-} {
+): TrayActions {
   return {
     toggleWindow: () => app.toggleWindow(),
+    showWindow: () => app.showWindow(),
+    hideWindow: () => app.hideWindow(),
     openFile: () => void app.openViaDialog(),
     openRecent: (path: string) => app.openFile(path),
     recentFiles: () => state.recentFiles(),
-    opacityStepUp: () => app.opacityUp(),
-    opacityStepDown: () => app.opacityDown(),
+    transparencyUp: () => app.transparencyUp(),
+    transparencyDown: () => app.transparencyDown(),
     autoScrollEnabled: () => state.autoScrollEnabled(),
     toggleAutoScroll: () => app.toggleAutoScroll(),
     autoScrollSpeed: () => state.autoScrollSpeed(),
@@ -93,7 +81,10 @@ export function trayActionsFrom(
     toggleClickThrough: () => app.toggleClickThrough(),
     alwaysTopEnabled: () => state.alwaysTopEnabled(),
     toggleAlwaysTop: () => app.toggleAlwaysOnTop(),
+    captureProtectionEnabled: () => state.captureProtectionEnabled(),
+    toggleCaptureProtection: () => app.toggleCaptureProtection(),
     accelerators: () => state.accelerators(),
+    speedAccelerators: () => state.speedAccelerators(),
     quit: () => app.quit(),
   };
 }

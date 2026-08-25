@@ -17,6 +17,10 @@ export interface AppState {
   fileName: string | null;
   registeredShortcuts: string[];
   accelerators: Record<string, string>;
+  captureProtection: boolean;
+  speedAccelerators: Record<string, string>;
+  /** Последний путь, открытый md-ссылкой (тест-хук без реального openPath). */
+  lastOpenedExternalPath: string | null;
 }
 
 export interface LaunchedApp {

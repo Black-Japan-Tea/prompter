@@ -1,10 +1,5 @@
 import { MenuItemModel, MenuController } from './MenuController';
-import {
-  ACCELERATORS,
-  SPEED_ACCELERATORS,
-  AppCommand,
-  BroadcastState,
-} from '../../shared/contracts';
+import { ACCELERATORS, AppCommand, BroadcastState } from '../../shared/contracts';
 
 const SPEED_LABELS: Record<string, string> = {
   slow: 'Медленно',
@@ -49,7 +44,7 @@ export function buildMenuItems(state: BroadcastState): MenuItemModel[] {
       id: `speed:${speed}`,
       kind: 'radio',
       label: SPEED_LABELS[speed],
-      accelerator: display(SPEED_ACCELERATORS[speed]),
+      accelerator: display(state.speedAccelerators[speed]),
       checked: state.autoScrollSpeed === speed,
     });
   }
@@ -63,6 +58,13 @@ export function buildMenuItems(state: BroadcastState): MenuItemModel[] {
       checked: state.clickThrough,
     },
     {
+      id: 'capture-protection',
+      kind: 'checkbox',
+      label: 'Невидимо в трансляции',
+      accelerator: accel('capture-protection-toggle'),
+      checked: state.captureProtection,
+    },
+    {
       id: 'always-top',
       kind: 'checkbox',
       label: 'Поверх всех окон',
@@ -70,7 +72,7 @@ export function buildMenuItems(state: BroadcastState): MenuItemModel[] {
       checked: state.alwaysOnTop,
     },
     { id: 'sep-4', kind: 'separator', label: '' },
-    { id: 'hide', kind: 'item', label: 'Спрятать окно', accelerator: 'Esc' },
+    { id: 'hide', kind: 'item', label: 'Спрятать окно' },
     { id: 'quit', kind: 'item', label: 'Выход', accelerator: 'Ctrl+Q' },
   );
   return items;
@@ -101,6 +103,9 @@ export function commandForItem(id: string): AppCommand | null {
   }
   if (id === 'clickthrough') {
     return { type: 'clickthrough-toggle' };
+  }
+  if (id === 'capture-protection') {
+    return { type: 'capture-protection-toggle' };
   }
   if (id === 'always-top') {
     return { type: 'always-top-toggle' };
@@ -260,7 +265,9 @@ export class MenuView {
         return;
       }
       const target = event.target as Node;
-      if (!this.container.contains(target) && target !== this.trigger) {
+      // Клик по SVG-полоскам внутри кнопки — это клик по кнопке (тогл),
+      // а не «мимо»: строгая проверка target !== trigger пересылала меню.
+      if (!this.container.contains(target) && !this.trigger.contains(target)) {
         this.close();
       }
     }, true);

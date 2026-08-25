@@ -6,7 +6,7 @@ import {
   type Page,
 } from '@playwright/test';
 import { execFile } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -183,13 +183,46 @@ test('5. правка файла на диске обновляет контен
 test('6. прозрачность шагами меняется и отражается в шапке', async () => {
   const before = (await mainState()).opacity;
 
+  // opacity-down = меньше прозрачности = окно плотнее (непрозрачность +0.1).
   await mainInvoke('executeCommand', { type: 'opacity-down' });
   const after = (await mainState()).opacity;
-  expect(Math.round((before - after) * 100)).toBe(10);
-  await expect(page.locator('#badge-opacity')).toContainText(`${Math.round(after * 100)}%`);
+  expect(Math.round((after - before) * 100)).toBe(10);
+  await expect(page.locator('#badge-opacity')).toContainText(`${Math.round((1 - after) * 100)}%`);
 
   await mainInvoke('executeCommand', { type: 'opacity-up' });
   expect((await mainState()).opacity).toBe(before);
+});
+
+test('6b. при 0% прозрачности окно абсолютно непрозрачно', async () => {
+  const before = (await mainState()).opacity;
+
+  // Доводим до предела (0.8 → 1.0 на дефолте), сколько бы шагов ни понадобилось.
+  for (let i = 0; (await mainState()).opacity < 0.999; i++) {
+    if (i > 6) {
+      throw new Error('прозрачность не доходит до непрозрачности');
+    }
+    await mainInvoke('executeCommand', { type: 'opacity-down' });
+  }
+  expect((await mainState()).opacity).toBe(1);
+
+  // Фон .app без альфы (rgb, не rgba) — сквозь окно ничего не просвечивает.
+  const bg = await page.locator('.app').evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(bg).toBe('rgb(22, 24, 29)');
+
+  // В среднем режиме остаётся лёгкое «стекло» 0.94.
+  await mainInvoke('executeCommand', { type: 'opacity-up' });
+  await expect
+    .poll(async () => page.locator('.app').evaluate((el) => getComputedStyle(el).backgroundColor))
+    .toBe('rgba(22, 24, 29, 0.94)');
+
+  // Возвращаем стартовую окрестность (шаг 0.1 может перескочить точное
+  // значение), чтобы не протекать в остальные тесты.
+  while ((await mainState()).opacity < before - 0.051) {
+    await mainInvoke('executeCommand', { type: 'opacity-up' });
+  }
+  while ((await mainState()).opacity > before + 0.051) {
+    await mainInvoke('executeCommand', { type: 'opacity-down' });
+  }
 });
 
 test('7. автопрокрутка включается тоглом и скорость влияет на движение', async () => {
@@ -200,19 +233,28 @@ test('7. автопрокрутка включается тоглом и ско�
   await mainInvoke('openFile', scrollPath);
   await expect(page.locator('#content h1')).toHaveText('Скролл');
 
+  // МЕДЛЕННАЯ скорость обязана двигаться: раньше дробные 0.4px/кадр
+  // стирались в целых scrollTop и прокрутка стояла. Окно показываем —
+  // в скрытом rAF троттлится и кадров почти нет.
+  await mainInvoke('executeCommand', { type: 'show-window' });
+  await mainInvoke('executeCommand', { type: 'autoscroll-speed', speed: 'slow' });
+  await mainInvoke('executeCommand', { type: 'autoscroll-toggle' });
+  await page.waitForTimeout(1100);
+  const scrollTopSlow = await page.evaluate(() => document.getElementById('viewer')?.scrollTop ?? 0);
+  expect(scrollTopSlow).toBeGreaterThan(15); // ~24px/s
+  await mainInvoke('executeCommand', { type: 'autoscroll-toggle' });
+
   await mainInvoke('executeCommand', { type: 'autoscroll-speed', speed: 'fast' });
-  // rAF троттлится в скрытом окне — показываем, как это бывает у живого пользователя.
-  await mainInvoke('toggleWindow');
   await mainInvoke('executeCommand', { type: 'autoscroll-toggle' });
   await expect(page.locator('#badge-autoscroll')).toBeVisible();
   await expect(page.locator('body')).toHaveClass(/autoscroll-on/);
 
   await page.waitForTimeout(900);
   const scrollTopFast = await page.evaluate(() => document.getElementById('viewer')?.scrollTop ?? 0);
-  expect(scrollTopFast).toBeGreaterThan(40);
+  expect(scrollTopFast).toBeGreaterThan(scrollTopSlow + 20);
 
   await mainInvoke('executeCommand', { type: 'autoscroll-toggle' });
-  await mainInvoke('toggleWindow');
+  await mainInvoke('executeCommand', { type: 'toggle-window' });
   expect((await mainState()).autoScrollEnabled).toBe(false);
 });
 
@@ -259,4 +301,37 @@ test('9. второй экземпляр не живёт: показывает �
   await expect
     .poll(async () => (await mainState()).windowVisible, { timeout: 5000 })
     .toBe(true);
+});
+
+test('10. md-ссылка в конспекте открывается системным приложением по ассоциации', async () => {
+  writeFileSync(join(workDir, 'guide.md'), '# Гайд', 'utf8');
+  mkdirSync(join(workDir, 'sub'), { recursive: true });
+  writeFileSync(join(workDir, 'sub', 'deep.md'), '# Глубокий', 'utf8');
+  const linker = join(workDir, 'linker.md');
+  writeFileSync(linker, '[Гайд](guide.md) · [Глубокий](sub/deep.md) · [Сайт](https://example.com)', 'utf8');
+  await mainInvoke('openFile', linker);
+
+  // Относительная ссылка от каталога файла.
+  await page.locator('#content a', { hasText: 'Гайд' }).click();
+  await expect
+    .poll(async () => (await mainState()).lastOpenedExternalPath)
+    .toBe(join(workDir, 'guide.md'));
+
+  // Вложенный путь резолвится каталогом текущего файла.
+  await page.locator('#content a', { hasText: 'Глубокий' }).click();
+  await expect
+    .poll(async () => (await mainState()).lastOpenedExternalPath)
+    .toBe(join(workDir, 'sub', 'deep.md'));
+
+  // https-ссылки не идут через внешний путь (остаются навигацией окна).
+  await page.locator('#content a', { hasText: 'Сайт' }).click();
+  await page.waitForTimeout(300);
+  expect((await mainState()).lastOpenedExternalPath).toBe(join(workDir, 'sub', 'deep.md'));
+});
+
+test('11. выделение текста заливается фирменным оранжевым', async () => {
+  const selectionBg = await page.locator('#content').evaluate(
+    (el) => getComputedStyle(el, '::selection').backgroundColor,
+  );
+  expect(selectionBg).toBe('rgba(253, 101, 0, 0.45)');
 });

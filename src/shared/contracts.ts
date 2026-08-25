@@ -13,6 +13,8 @@ export const IPC = {
   command: 'prompter:command',
   notify: 'prompter:notify',
   requestState: 'prompter:request-state',
+  /** Открыть путь системным приложением (md-ссылка → Typora и т.п.). */
+  openExternalPath: 'prompter:open-external-path',
 } as const;
 
 /** Полное содержимое файла при открытии. */
@@ -40,11 +42,12 @@ export type AppCommand =
   | { type: 'autoscroll-speed'; speed: AutoScrollSpeed }
   | { type: 'clickthrough-toggle' }
   | { type: 'always-top-toggle' }
+  | { type: 'capture-protection-toggle' }
   | { type: 'quit' };
 
 export type AppCommandType = AppCommand['type'];
 
-/** Все типы команд — для полноты реестра хоткеев в тестах. */
+/** Все типы команд — для реестра и валидации. */
 export const COMMAND_TYPES: readonly AppCommandType[] = [
   'toggle-window',
   'show-window',
@@ -58,17 +61,37 @@ export const COMMAND_TYPES: readonly AppCommandType[] = [
   'autoscroll-speed',
   'clickthrough-toggle',
   'always-top-toggle',
+  'capture-protection-toggle',
   'quit',
 ];
 
 /**
- * Глобальные акселераторы: у каждой команды — хоткей.
- * In-window дополнения (Esc, Ctrl+O, Ctrl+Q, Ctrl+=/-, F10) живут в renderer.
+ * Команды с глобальными хоткеями. Показ/скрытие окна — только тогл
+ * одной комбинацией; show/hide остаются для меню и internal-кода.
+ */
+export const HOTKEYED_COMMAND_TYPES: readonly AppCommandType[] = [
+  'toggle-window',
+  'open-file',
+  'open-recent',
+  'repeat-last-file',
+  'opacity-up',
+  'opacity-down',
+  'autoscroll-toggle',
+  'autoscroll-speed',
+  'clickthrough-toggle',
+  'always-top-toggle',
+  'capture-protection-toggle',
+  'quit',
+];
+
+/**
+ * Глобальные акселераторы: у каждой хоткейной команды — комбинация.
+ * In-window дополнения (Ctrl+O, Ctrl+Q, Ctrl+=/-, F10) живут в renderer.
  */
 export const ACCELERATORS: Record<AppCommandType, string> = {
   'toggle-window': 'Control+Alt+P',
-  'show-window': 'Control+Alt+S',
-  'hide-window': 'Control+Alt+H',
+  'show-window': '',
+  'hide-window': '',
   'open-file': 'Control+Alt+O',
   'open-recent': 'Control+Alt+R',
   'repeat-last-file': 'Control+Alt+Enter',
@@ -78,14 +101,22 @@ export const ACCELERATORS: Record<AppCommandType, string> = {
   'autoscroll-speed': 'Control+Alt+1..3',
   'clickthrough-toggle': 'Control+Alt+T',
   'always-top-toggle': 'Control+Alt+A',
+  'capture-protection-toggle': 'Control+Alt+V',
   quit: 'Control+Alt+Q',
 };
 
-/** Реальные регистрируемые акселераторы выбора скорости (составная команда). */
+/** Реальные первичные акселераторы выбора скорости (составная команда). */
 export const SPEED_ACCELERATORS: Record<AutoScrollSpeed, string> = {
   slow: 'Control+Alt+1',
   medium: 'Control+Alt+2',
   fast: 'Control+Alt+3',
+};
+
+/** Фолбэки для скоростей: Alt+цифра часто занята системными переключателями. */
+export const SPEED_ACCELERATOR_FALLBACKS: Record<AutoScrollSpeed, readonly string[]> = {
+  slow: ['Control+Shift+Alt+1'],
+  medium: ['Control+Shift+Alt+2'],
+  fast: ['Control+Shift+Alt+3'],
 };
 
 /**
@@ -94,8 +125,6 @@ export const SPEED_ACCELERATORS: Record<AutoScrollSpeed, string> = {
  */
 export const ACCELERATOR_FALLBACKS: Partial<Record<AppCommandType, readonly string[]>> = {
   'toggle-window': ['Alt+Shift+P', 'Control+Shift+P'],
-  'show-window': ['Alt+Shift+S', 'Control+Shift+S'],
-  'hide-window': ['Alt+Shift+H', 'Control+Shift+H'],
   'open-file': ['Alt+Shift+O', 'Control+Shift+O'],
   'open-recent': ['Alt+Shift+R', 'Control+Shift+R'],
   'repeat-last-file': ['Alt+Shift+Enter'],
@@ -104,6 +133,7 @@ export const ACCELERATOR_FALLBACKS: Partial<Record<AppCommandType, readonly stri
   'autoscroll-toggle': ['Alt+Shift+Space'],
   'clickthrough-toggle': ['Alt+Shift+T', 'Control+Shift+T'],
   'always-top-toggle': ['Alt+Shift+A', 'Control+Shift+A'],
+  'capture-protection-toggle': ['Alt+Shift+V', 'Control+Shift+V'],
   quit: ['Alt+Shift+Q', 'Control+Shift+Q'],
 };
 
@@ -122,9 +152,12 @@ export interface BroadcastState {
   opacity: number;
   clickThrough: boolean;
   alwaysOnTop: boolean;
+  captureProtection: boolean;
   recentFiles: readonly string[];
   /** Активные хоткеи с учётом фолбэков: «что реально работает сейчас». */
   accelerators: Partial<Record<AppCommandType, string>>;
+  /** Активные хоткеи скоростей (могли уехать на фолбэки). */
+  speedAccelerators: Record<AutoScrollSpeed, string>;
 }
 
 /** API, которое preload выставляет в renderer через contextBridge. */
@@ -143,4 +176,6 @@ export interface PrompterApi {
   requestState(): void;
   /** Путь файла из drag&drop: в современном Electron только так. */
   filePathFor(file: File): string;
+  /** Открыть файл ассоциированным приложением ОС (md-ссылки → Typora). */
+  openExternalPath(path: string): void;
 }

@@ -53,16 +53,31 @@ describe('assembleIco', () => {
 });
 
 describe('generateIcons', () => {
-  it('создаёт tray.png и icon.ico с полным набором размеров', () => {
+  it('создаёт per-DPI набор tray-иконок с точными размерами и icon.ico', () => {
     const dir = mkdtempSync(join(tmpdir(), 'prompter-icons-'));
     tempDirs.push(dir);
 
     const paths = generateIcons(dir);
 
-    expect(existsSync(paths.trayPath)).toBe(true);
-    expect(existsSync(paths.icoPath)).toBe(true);
-    expect([...readFileSync(paths.trayPath).subarray(0, 8)]).toEqual(PNG_SIGNATURE);
+    // Слот трея Windows — 16px (100%), 20px (125%), 24px (150%), 32px (200%):
+    // каждый размер рендерится отдельно, чтобы не было даунскейла-мыла.
+    const expected: Array<[string, number]> = [
+      ['1x', 16],
+      ['1.25x', 20],
+      ['1.5x', 24],
+      ['2x', 32],
+    ];
+    for (const [suffix, size] of expected) {
+      const file = paths.trayPaths[suffix];
+      expect(file, `tray@${suffix}.png не сгенерирован`).toBeDefined();
+      const png = readFileSync(file as string);
+      expect([...png.subarray(0, 8)]).toEqual(PNG_SIGNATURE);
+      // IHDR: ширина и высота — big-endian uint32 на смещениях 16 и 20.
+      expect(png.readUInt32BE(16)).toBe(size);
+      expect(png.readUInt32BE(20)).toBe(size);
+    }
 
+    expect(existsSync(paths.icoPath)).toBe(true);
     const ico = readFileSync(paths.icoPath);
     expect(ico.readUInt16LE(4)).toBe(7); // 16,24,32,48,64,128,256
     const sizes = [16, 24, 32, 48, 64, 128, 0];

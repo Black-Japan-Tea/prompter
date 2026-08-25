@@ -80,6 +80,10 @@ function buildActions(accs: Record<string, string>): Action[] {
       name: 'top-toggle',
       run: (electron) => mainInvoke(electron, 'dispatchAccelerator', accs['always-top-toggle']),
     },
+    {
+      name: 'capture-toggle',
+      run: (electron) => mainInvoke(electron, 'dispatchAccelerator', accs['capture-protection-toggle']),
+    },
     { name: 'font-up', run: (_electron, page) => page.keyboard.press('Control+=') },
     {
       name: 'menu-cycle',
@@ -103,6 +107,9 @@ async function reset(launched: LaunchedApp): Promise<void> {
   if (!state.alwaysOnTop) {
     await mainInvoke(app, 'executeCommand', { type: 'always-top-toggle' });
   }
+  if (!state.captureProtection) {
+    await mainInvoke(app, 'executeCommand', { type: 'capture-protection-toggle' });
+  }
   if (await page.locator('#menu').isVisible()) {
     await page.keyboard.press('Escape');
   }
@@ -111,17 +118,23 @@ async function reset(launched: LaunchedApp): Promise<void> {
 }
 
 function checkInvariants(state: AppState, label: string): void {
-  expect(state.contentProtection, `${label}: защита контекта выключена!`).toBe(true);
+  // Защиту можно выключить намеренно — но флаг окна обязан совпадать с настройкой.
+  expect(
+    state.contentProtection,
+    `${label}: рассинхрон защиты захвата и настройки`,
+  ).toBe(state.captureProtection);
   expect(state.skipTaskbar, `${label}: окно вылезло на панель задач!`).toBe(true);
   expect(state.trayAlive, `${label}: трей умер!`).toBe(true);
-  expect(state.opacity, `${label}: прозрачность вне диапазона`).toBeGreaterThanOrEqual(0.2);
+  expect(state.opacity, `${label}: прозрачность вне диапазона`).toBeGreaterThanOrEqual(0.05);
   expect(state.opacity, `${label}: прозрачность вне диапазона`).toBeLessThanOrEqual(1);
   expect(state.fontSize, `${label}: кегль вне диапазона`).toBeGreaterThanOrEqual(12);
   expect(state.fontSize, `${label}: кегль вне диапазона`).toBeLessThanOrEqual(28);
 }
 
 test.describe.serial('комбинаторика: каждая пара действий', () => {
-  for (let rowIndex = 0; rowIndex < 16; rowIndex++) {
+  const rowCount = 17;
+
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
     test(`строка ${rowIndex}: действие «${rowIndex}» перед каждым другим`, async () => {
       const accs = (await mainState(launched.app)).accelerators;
       const actions = buildActions(accs);

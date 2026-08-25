@@ -39,6 +39,7 @@ const api: PrompterApi = {
   quit: () => ipcRenderer.send(IPC.quitRequest),
   requestState: () => ipcRenderer.send(IPC.requestState),
   filePathFor: (file: File) => webUtils.getPathForFile(file),
+  openExternalPath: (path: string) => ipcRenderer.send(IPC.openExternalPath, path),
 };
 
 contextBridge.exposeInMainWorld('prompter', api);

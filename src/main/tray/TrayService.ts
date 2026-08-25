@@ -1,19 +1,17 @@
-import { Menu, Tray, nativeImage } from 'electron';
+import { Menu, Tray } from 'electron';
 import { AutoScrollSpeed } from '../../shared/settings';
-import {
-  ACCELERATORS,
-  SPEED_ACCELERATORS,
-  AppCommandType,
-} from '../../shared/contracts';
+import { ACCELERATORS, AppCommandType } from '../../shared/contracts';
 
 /** Действия, которые меню трея запрашивает у приложения. */
 export interface TrayActions {
   toggleWindow(): void;
+  showWindow(): void;
+  hideWindow(): void;
   openFile(): void;
   openRecent(path: string): void;
   recentFiles(): readonly string[];
-  opacityStepUp(): void;
-  opacityStepDown(): void;
+  transparencyUp(): void;
+  transparencyDown(): void;
   autoScrollEnabled(): boolean;
   toggleAutoScroll(): void;
   autoScrollSpeed(): AutoScrollSpeed;
@@ -22,7 +20,10 @@ export interface TrayActions {
   toggleClickThrough(): void;
   alwaysTopEnabled(): boolean;
   toggleAlwaysTop(): void;
+  captureProtectionEnabled(): boolean;
+  toggleCaptureProtection(): void;
   accelerators(): Partial<Record<AppCommandType, string>>;
+  speedAccelerators(): Record<AutoScrollSpeed, string>;
   quit(): void;
 }
 
@@ -37,13 +38,19 @@ export class TrayService {
   private readonly tray: Tray;
   private readonly icon: Electron.NativeImage;
 
-  constructor(iconPath: string, private readonly actions: TrayActions) {
-    this.icon = nativeImage.createFromPath(iconPath);
+  constructor(icon: Electron.NativeImage, private readonly actions: TrayActions) {
+    // Иконка приходит с per-DPI представлениями: слот трея Windows
+    // выбирает точный размер без системного даунскейла (чёткая галочка).
+    this.icon = icon;
     this.tray = new Tray(this.icon);
-    this.tray.setToolTip('Prompter — суфлёр для Markdown');
+    this.tray.setToolTip('Prompter');
     this.tray.setContextMenu(this.buildMenu());
-    // Левый клик по иконке тоже переключает окно — как хоткей.
-    this.tray.on('click', () => this.actions.toggleWindow());
+    // Стандарт Windows: двойной клик — главное действие (показ окна),
+    // правый — контекстное меню. Одиночный клик окно не дёргает.
+    this.tray.on('double-click', () => this.actions.showWindow());
+    this.tray.on('right-click', () => {
+      this.tray.popUpContextMenu();
+    });
   }
 
   /** Пересобирает меню после изменения чекбоксов/радиокнопок. */
@@ -112,12 +119,12 @@ export class TrayService {
       {
         label: 'Прозрачность +',
         accelerator: this.accel('opacity-up'),
-        click: (): void => this.actions.opacityStepUp(),
+        click: (): void => this.actions.transparencyUp(),
       },
       {
         label: 'Прозрачность −',
         accelerator: this.accel('opacity-down'),
-        click: (): void => this.actions.opacityStepDown(),
+        click: (): void => this.actions.transparencyDown(),
       },
       { type: 'separator' },
       {
@@ -133,7 +140,7 @@ export class TrayService {
           label: SPEED_LABELS[speed],
           type: 'radio' as const,
           checked: this.actions.autoScrollSpeed() === speed,
-          accelerator: SPEED_ACCELERATORS[speed],
+          accelerator: this.actions.speedAccelerators()[speed],
           click: (): void => this.actions.setAutoScrollSpeed(speed),
         })),
       },
@@ -145,6 +152,13 @@ export class TrayService {
         click: (): void => this.actions.toggleClickThrough(),
       },
       {
+        label: 'Невидимо в трансляции',
+        type: 'checkbox',
+        checked: this.actions.captureProtectionEnabled(),
+        accelerator: this.accel('capture-protection-toggle'),
+        click: (): void => this.actions.toggleCaptureProtection(),
+      },
+      {
         label: 'Поверх всех окон',
         type: 'checkbox',
         checked: this.actions.alwaysTopEnabled(),
@@ -154,8 +168,7 @@ export class TrayService {
       { type: 'separator' },
       {
         label: 'Спрятать окно',
-        accelerator: this.accel('hide-window'),
-        click: (): void => this.actions.toggleWindow(),
+        click: (): void => this.actions.hideWindow(),
       },
       {
         label: 'Выход',

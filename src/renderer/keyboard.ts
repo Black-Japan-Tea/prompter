@@ -1,13 +1,12 @@
 /**
  * Хоткеи внутри окна (глобальные живут в main и перехватываются ОС):
- * F10 — меню, Esc — скрыть окно, Ctrl+O — открыть, Ctrl+Q — выход,
- * Ctrl+= / Ctrl+- — размер шрифта.
+ * F10 — меню, Esc — только закрывает меню, Ctrl+O — открыть, Ctrl+Q — выход,
+ * Ctrl+= / Ctrl+- — размер шрифта. Скрытие окна — тогл Ctrl+Alt+P/кнопки.
  */
 export interface KeyboardDependencies {
   isMenuOpen(): boolean;
   openMenu(): void;
   closeMenu(): void;
-  hideWindow(): void;
   openFile(): void;
   quit(): void;
   changeFontSize(delta: 1 | -1): void;
@@ -27,11 +26,10 @@ export function initKeyboard(deps: KeyboardDependencies): void {
       return;
     }
     if (event.key === 'Escape') {
-      event.preventDefault();
+      // Esc закрывает только меню; окно не прячет.
       if (deps.isMenuOpen()) {
+        event.preventDefault();
         deps.closeMenu();
-      } else {
-        deps.hideWindow();
       }
       return;
     }

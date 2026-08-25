@@ -10,6 +10,7 @@ export interface IpcHandlers {
   hideWindow(): void;
   quit(): void;
   requestState(): void;
+  openExternalPath(path: string): void;
 }
 
 export const FONT_MIN = 12;
@@ -43,6 +44,12 @@ export function registerAppIpc(handlers: IpcHandlers): void {
   ipcMain.on(IPC.quitRequest, () => handlers.quit());
   // Первичная синхронизация: renderer подписался и просит состояние.
   ipcMain.on(IPC.requestState, () => handlers.requestState());
+  // md-ссылка из конспекта: открыть ассоциированным приложением ОС.
+  ipcMain.on(IPC.openExternalPath, (_event, raw: unknown) => {
+    if (typeof raw === 'string' && raw.length > 0) {
+      handlers.openExternalPath(raw);
+    }
+  });
 }
 
 export function clampFontSize(size: number): number {

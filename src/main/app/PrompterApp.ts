@@ -1,8 +1,9 @@
-import { app, globalShortcut } from 'electron';
+import { app, globalShortcut, shell } from 'electron';
 import { join } from 'node:path';
 import { SettingsStore } from '../settings/SettingsStore';
 import { PrompterWindow } from '../window/PrompterWindow';
 import { TrayService } from '../tray/TrayService';
+import { buildTrayIcon } from '../tray/trayIcon';
 import { ShortcutManager } from '../shortcuts/ShortcutManager';
 import { OpacityController, OpacityView } from '../state/OpacityController';
 import { AutoScrollSpeed } from '../../shared/settings';
@@ -16,6 +17,7 @@ import {
   ACCELERATORS,
   ACCELERATOR_FALLBACKS,
   SPEED_ACCELERATORS,
+  SPEED_ACCELERATOR_FALLBACKS,
 } from '../../shared/contracts';
 import { AppCommandTarget, executeCommand } from './commands';
 import { trayActionsFrom, chooseAccelerator } from './AppCommands';
@@ -32,6 +34,12 @@ export class PrompterApp implements AppCommandTarget {
   private readonly doc: DocumentController;
   /** Активные хоткеи после разрешения конфликтов с другими программами. */
   private activeAccelerators: Partial<Record<AppCommandType, string>> = {};
+  /** Активные хоткеи скоростей (с фолбэками). */
+  private speedAccelerators: Record<AutoScrollSpeed, string> = { ...SPEED_ACCELERATORS };
+  /** Открыватель внешних путей: shell.openPath, подменяется тест-хуком. */
+  private externalOpener: (path: string) => Promise<string> = (path) => shell.openPath(path);
+  /** Последний путь, запрошенный md-ссылкой (диагностика/E2E). */
+  private lastOpenedExternalPath: string | null = null;
 
   constructor() {
     this.settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
@@ -39,7 +47,10 @@ export class PrompterApp implements AppCommandTarget {
     this.window = new PrompterWindow(loaded);
     this.opacity = new OpacityController(this.opacityView(), loaded.opacity);
     this.doc = new DocumentController(this.settings, this.documentEvents());
-    this.tray = new TrayService(this.trayIconPath(), trayActionsFrom(this, this.stateSource()));
+    this.tray = new TrayService(
+      buildTrayIcon(join(app.getAppPath(), 'assets', 'icons')),
+      trayActionsFrom(this, this.stateSource()),
+    );
     this.shortcuts = new ShortcutManager(this.shortcutHost());
     if (loaded.clickThrough) {
       this.window.setClickThrough(true);
@@ -57,6 +68,7 @@ export class PrompterApp implements AppCommandTarget {
       hideWindow: () => this.hideWindow(),
       quit: () => this.quit(),
       requestState: () => this.broadcast(),
+      openExternalPath: (path) => void this.openExternalPath(path),
     });
     this.registerHotkeysWithFallbacks();
     this.tray.showStartupHint();
@@ -75,16 +87,15 @@ export class PrompterApp implements AppCommandTarget {
 
     const singleKeyCommands: Array<[AppCommandType, () => void]> = [
       ['toggle-window', () => this.toggleWindow()],
-      ['show-window', () => this.showWindow()],
-      ['hide-window', () => this.hideWindow()],
       ['open-file', () => this.openViaDialog()],
       ['open-recent', () => this.repeatLastFile()],
       ['repeat-last-file', () => this.repeatLastFile()],
-      ['opacity-up', () => this.opacityUp()],
-      ['opacity-down', () => this.opacityDown()],
+      ['opacity-up', () => this.transparencyUp()],
+      ['opacity-down', () => this.transparencyDown()],
       ['autoscroll-toggle', () => this.toggleAutoScroll()],
       ['clickthrough-toggle', () => this.toggleClickThrough()],
       ['always-top-toggle', () => this.toggleAlwaysOnTop()],
+      ['capture-protection-toggle', () => this.toggleCaptureProtection()],
       ['quit', () => this.quit()],
     ];
 
@@ -108,18 +119,28 @@ export class PrompterApp implements AppCommandTarget {
       }
     }
 
-    // Скорости — три отдельные комбинации, фолбэков не имеют.
+    // Скорости — три отдельные комбинации с собственными фолбэками.
     for (const speed of ['slow', 'medium', 'fast'] as AutoScrollSpeed[]) {
-      const accelerator = SPEED_ACCELERATORS[speed];
-      const ok =
-        this.shortcuts.register({ [accelerator]: () => this.setAutoScrollSpeed(speed) })
-          .length === 0;
-      if (ok) {
-        taken.add(accelerator);
-        this.activeAccelerators['autoscroll-speed'] = 'Control+Alt+1..3';
-      } else {
+      const handler = (): void => this.setAutoScrollSpeed(speed);
+      const isFree = (accelerator: string): boolean =>
+        this.shortcuts.register({ [accelerator]: handler }).length === 0;
+      const chosen = chooseAccelerator(
+        SPEED_ACCELERATORS[speed],
+        SPEED_ACCELERATOR_FALLBACKS[speed],
+        isFree,
+        taken,
+      );
+      if (chosen === null) {
         failed.push('autoscroll-speed');
+        continue;
       }
+      taken.add(chosen);
+      this.speedAccelerators[speed] = chosen;
+      this.activeAccelerators['autoscroll-speed'] = [
+        this.speedAccelerators.slow,
+        this.speedAccelerators.medium,
+        this.speedAccelerators.fast,
+      ].join(' / ');
     }
 
     if (remapped.length > 0) {
@@ -174,14 +195,16 @@ export class PrompterApp implements AppCommandTarget {
     this.doc.repeatLastFile();
   }
 
-  opacityUp(): void {
-    this.opacity.stepUp();
+  /** Прозрачность растёт — окно прозрачнее (непрозрачность вниз, до 0.05). */
+  transparencyUp(): void {
+    this.opacity.stepDown();
     this.settings.update({ opacity: this.opacity.value });
     this.broadcast();
   }
 
-  opacityDown(): void {
-    this.opacity.stepDown();
+  /** Прозрачность падает — окно плотнее (непрозрачность вверх, до 1). */
+  transparencyDown(): void {
+    this.opacity.stepUp();
     this.settings.update({ opacity: this.opacity.value });
     this.broadcast();
   }
@@ -216,9 +239,38 @@ export class PrompterApp implements AppCommandTarget {
     this.broadcast();
   }
 
+  toggleCaptureProtection(): void {
+    const next = !this.settings.load().captureProtection;
+    this.settings.update({ captureProtection: next });
+    this.window.setContentProtectionEnabled(next);
+    this.tray.refresh();
+    this.broadcast();
+    // Единственный источник предупреждений о трансляции — здесь, в main.
+    this.notify(
+      next ? 'info' : 'error',
+      next
+        ? 'Окно снова невидимо в трансляции'
+        : 'ВНИМАНИЕ: окно снова видно в трансляции экрана',
+    );
+  }
+
   // ── Диагностика и тест-хуки ────────────────────────────────────
   simulateNextPick(path: string | null): void {
     this.doc.simulateNextPick(path);
+  }
+
+  /** md-ссылка из конспекта: открыть файл приложением ОС по ассоциации. */
+  async openExternalPath(path: string): Promise<void> {
+    if (process.env.PROMPTER_TEST_HOOKS === '1') {
+      // В тестах не поднимаем Typora: фиксируем путь для ассертов.
+      this.lastOpenedExternalPath = path;
+      return;
+    }
+    const error = await this.externalOpener(path);
+    this.lastOpenedExternalPath = path;
+    if (error !== '') {
+      this.notify('error', `Не удалось открыть ${baseName(path)}: ${error}`);
+    }
   }
 
   dispatchAccelerator(accelerator: string): void {
@@ -237,6 +289,7 @@ export class PrompterApp implements AppCommandTarget {
     currentFile: string | null;
     trayAlive: boolean;
     registeredShortcuts: string[];
+    lastOpenedExternalPath: string | null;
   } {
     return {
       ...this.broadcastState(),
@@ -247,6 +300,7 @@ export class PrompterApp implements AppCommandTarget {
       currentFile: this.doc.currentPath,
       trayAlive: this.tray.isAlive,
       registeredShortcuts: this.shortcuts.registered(),
+      lastOpenedExternalPath: this.lastOpenedExternalPath,
     };
   }
 
@@ -293,8 +347,10 @@ export class PrompterApp implements AppCommandTarget {
       opacity: this.opacity.value,
       clickThrough: s.clickThrough,
       alwaysOnTop: s.alwaysOnTop,
+      captureProtection: s.captureProtection,
       recentFiles: this.doc.recentList(),
       accelerators: this.activeAccelerators,
+      speedAccelerators: this.speedAccelerators,
     };
   }
 
@@ -304,8 +360,10 @@ export class PrompterApp implements AppCommandTarget {
       autoScrollSpeed: () => this.settings.load().autoScroll.speed,
       clickThroughEnabled: () => this.settings.load().clickThrough,
       alwaysTopEnabled: () => this.settings.load().alwaysOnTop,
+      captureProtectionEnabled: () => this.settings.load().captureProtection,
       recentFiles: () => this.doc.recentList(),
       accelerators: () => this.activeAccelerators,
+      speedAccelerators: () => this.speedAccelerators,
     };
   }
 
@@ -321,10 +379,6 @@ export class PrompterApp implements AppCommandTarget {
         globalShortcut.register(accelerator, () => this.shortcuts.dispatch(accelerator)),
       unregister: (accelerator: string) => globalShortcut.unregister(accelerator),
     };
-  }
-
-  private trayIconPath(): string {
-    return join(app.getAppPath(), 'assets', 'icons', 'tray.png');
   }
 }
 
