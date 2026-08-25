@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import { IPC, PrompterApi } from '../shared/contracts';
 
 function subscribe<T>(
@@ -21,6 +21,9 @@ const api: PrompterApi = {
   onStateChanged: (handler) => subscribe(IPC.stateChanged, handler),
   openFile: (path) => ipcRenderer.send(IPC.openFileRequest, path),
   setFontSize: (size) => ipcRenderer.send(IPC.fontSizeRequest, size),
+  hideWindow: () => ipcRenderer.send(IPC.hideWindowRequest),
+  quit: () => ipcRenderer.send(IPC.quitRequest),
+  filePathFor: (file) => webUtils.getPathForFile(file),
 };
 
 contextBridge.exposeInMainWorld('prompter', api);

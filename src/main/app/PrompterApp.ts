@@ -149,6 +149,11 @@ export class PrompterApp {
         this.broadcast();
       }
     });
+    ipcMain.on(IPC.hideWindowRequest, () => {
+      this.saveBounds();
+      this.window.hide();
+    });
+    ipcMain.on(IPC.quitRequest, () => app.quit());
   }
 
   private opacityUp(): void {

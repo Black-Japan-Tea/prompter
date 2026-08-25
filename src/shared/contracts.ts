@@ -8,6 +8,8 @@ export const IPC = {
   stateChanged: 'prompter:state-changed',
   openFileRequest: 'prompter:open-file-request',
   fontSizeRequest: 'prompter:font-size-request',
+  hideWindowRequest: 'prompter:hide-window-request',
+  quitRequest: 'prompter:quit-request',
 } as const;
 
 /** Полное содержимое файла при открытии. */
@@ -39,4 +41,8 @@ export interface PrompterApi {
   onStateChanged(handler: (state: BroadcastState) => void): () => void;
   openFile(path: string): void;
   setFontSize(size: number): void;
+  hideWindow(): void;
+  quit(): void;
+  /** Путь файла из drag&drop: в современном Electron только так. */
+  filePathFor(file: File): string;
 }

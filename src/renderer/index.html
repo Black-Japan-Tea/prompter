@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' data:;">
+  <title>Prompter</title>
+  <link rel="stylesheet" href="renderer.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="bar" id="bar">
+      <span class="file" id="file-name">Файл не выбран</span>
+      <span class="badges">
+        <span class="badge" id="badge-progress" hidden>0%</span>
+        <span class="badge" id="badge-opacity" hidden>◐ 85%</span>
+        <span class="badge badge-accent" id="badge-autoscroll" hidden>▶ авто</span>
+      </span>
+      <span class="controls">
+        <button class="btn" id="btn-hide" title="Скрыть окно (Ctrl+Alt+P)">&ndash;</button>
+        <button class="btn btn-danger" id="btn-quit" title="Закрыть приложение">&times;</button>
+      </span>
+    </header>
+    <main class="viewer" id="viewer">
+      <article class="content md" id="content"></article>
+      <div class="empty" id="empty">
+        <svg class="empty-icon" width="76" height="76" viewBox="0 0 64 64" aria-hidden="true">
+          <defs>
+            <linearGradient id="bubble-g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#6366F1"/>
+              <stop offset="1" stop-color="#8B5CF6"/>
+            </linearGradient>
+          </defs>
+          <rect x="4" y="6" width="56" height="42" rx="10" fill="url(#bubble-g)"/>
+          <path d="M16 44 L16 57 L29 44 Z" fill="url(#bubble-g)"/>
+          <rect x="16" y="18" width="32" height="4" rx="2" fill="#E8EAF0"/>
+          <rect x="16" y="26" width="22" height="4" rx="2" fill="#E8EAF0"/>
+          <rect x="16" y="34" width="27" height="4" rx="2" fill="#E8EAF0"/>
+        </svg>
+        <p class="empty-title">Перетащи .md сюда</p>
+        <p class="empty-hint">или открой через меню трея</p>
+      </div>
+    </main>
+    <div class="rail" id="rail" hidden><div class="rail-fill" id="rail-fill"></div></div>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>
