@@ -44,11 +44,11 @@ describe('OpacityController', () => {
     expect(controller.value).toBe(1);
   });
 
-  it('не опускается ниже 0.2 при разгоне вниз', () => {
-    const controller = new OpacityController(createView(), 0.25);
+  it('не опускается ниже 0.05 при разгоне вниз (95% прозрачности — максимум)', () => {
+    const controller = new OpacityController(createView(), 0.15);
     controller.stepDown();
     controller.stepDown();
-    expect(controller.value).toBe(0.2);
+    expect(controller.value).toBe(0.05);
   });
 
   it('клэмпит произвольное значение в допустимый диапазон', () => {
@@ -57,7 +57,7 @@ describe('OpacityController', () => {
     controller.set(42);
     expect(controller.value).toBe(1);
     controller.set(-3);
-    expect(controller.value).toBe(0.2);
+    expect(controller.value).toBe(0.05);
   });
 
   it('не плодит артефакты плавающей точки при шагах', () => {
