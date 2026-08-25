@@ -53,21 +53,44 @@ describe('paintIcon — форма и цвета', () => {
     expect(topLeft[0]).toBeGreaterThan(topLeft[2] + 150); // 253 против ~0
   });
 
-  it('в иконке есть белые пиксели пузыря', () => {
-    const whites = countWhere(icon, ([r, g, b, a]) => a === 255 && r > 225 && g > 225 && b > 225);
-    expect(whites).toBeGreaterThan(50);
+  it('крупная галочка: белые пиксели вдоль всей осевой линии', () => {
+    // Осевая ломаная галочки A(0.25,0.52) → B(0.435,0.68) → C(0.76,0.33).
+    const isWhite = (p: [number, number, number, number]) =>
+      p[3] === 255 && p[0] > 225 && p[1] > 225 && p[2] > 225;
+    expect(isWhite(pixel(icon, 16, 33))).toBe(true); // около A
+    expect(isWhite(pixel(icon, 22, 39))).toBe(true); // середина A→B
+    expect(isWhite(pixel(icon, 28, 44))).toBe(true); // около B
+    expect(isWhite(pixel(icon, 38, 32))).toBe(true); // середина B→C
+    expect(isWhite(pixel(icon, 49, 21))).toBe(true); // около C
   });
 
-  it('в иконке есть акцентные пиксели строк текста (оранжевый доминирует)', () => {
-    const accents = countWhere(icon, ([r, , b, a]) => a === 255 && r > 180 && b < 120);
-    expect(accents).toBeGreaterThan(50);
+  it('галочка занимает заметную долю площади (крупный глиф)', () => {
+    const whites = countWhere(icon, ([r, g, b, a]) => a === 255 && r > 225 && g > 225 && b > 225);
+    expect(whites).toBeGreaterThan(size * size * 0.06);
+  });
+
+  it('строк текста больше нет: тёмно-оранжевый бар-цвет отсутствует', () => {
+    // Прежний цвет строк (214,83,0) зеленее любого оттенка градиента (g ≥ 101).
+    const bars = countWhere(icon, ([, g, , a]) => a === 255 && g < 90);
+    expect(bars).toBe(0);
+  });
+
+  it('края сглажены суперсэмплингом: есть полупрозрачные пиксели', () => {
+    const semi = countWhere(icon, ([, , , a]) => a > 0 && a < 255);
+    expect(semi).toBeGreaterThan(20);
   });
 });
 
 describe('paintIcon — мелкие размеры', () => {
-  it('16px сохраняет форму: прозрачные углы и непрозрачный центр', () => {
+  it('16px читаем: прозрачные углы, оранжевый фон и белая галочка в центре', () => {
     const small = paintIcon(16);
     expect(pixel(small, 0, 0)[3]).toBe(0);
     expect(pixel(small, 8, 8)[3]).toBe(255);
+    // Точка на осевой галочки при 16px: B(0.435,0.68) ≈ (7,11). Штрих тоньше
+    // пикселя — на краю цвет смешан, поэтому порог мягче, но заметно белее фона.
+    const onStroke = pixel(small, 7, 11);
+    expect(onStroke[3]).toBe(255);
+    expect(onStroke[0]).toBeGreaterThan(200);
+    expect(onStroke[1]).toBeGreaterThan(170);
   });
 });
