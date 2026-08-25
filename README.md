@@ -60,7 +60,7 @@ npm start              # dev-запуск
 npm run dist           # сборка: release/Prompter-Setup-<v>.exe (NSIS) и Prompter-Portable-<v>.exe
 ```
 
-Дымовой тест собранного бинарника:
+Smoke-тест собранного бинарника:
 `PACKAGED_EXE="<путь к exe>" npx playwright test tests/e2e/packaged.spec.ts`
 
 Тихая установка/удаление (Git Bash: флаги `/S` портятся MSYS — запускайте через cmd):
