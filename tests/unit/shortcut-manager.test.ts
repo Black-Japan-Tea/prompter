@@ -103,4 +103,16 @@ describe('ShortcutManager', () => {
     expect(calls).toEqual(['new']);
     expect([...host.registered]).toEqual(['Control+Alt+P']);
   });
+
+  it('registered отдаёт список активных акселераторов', () => {
+    const host = new FakeShortcutHost();
+    const manager = new ShortcutManager(host);
+    manager.register({
+      'Control+Alt+P': () => undefined,
+      'Control+Alt+=': () => undefined,
+    });
+    manager.register({ 'Control+Alt+P': () => undefined });
+
+    expect(manager.registered().sort()).toEqual(['Control+Alt+=', 'Control+Alt+P']);
+  });
 });

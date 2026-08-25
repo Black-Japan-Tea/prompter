@@ -111,4 +111,16 @@ describe('SettingsStore', () => {
 
     expect(new SettingsStore(path).load().recentFiles).toEqual(['C:/a.md']);
   });
+
+  it('сохраняет и возвращает флаг поверха всех окон', () => {
+    const path = settingsPath();
+    const store = new SettingsStore(path);
+    store.update({ alwaysOnTop: false });
+
+    expect(new SettingsStore(path).load().alwaysOnTop).toBe(false);
+  });
+
+  it('дефолт alwaysOnTop — true', () => {
+    expect(DEFAULT_SETTINGS.alwaysOnTop).toBe(true);
+  });
 });
