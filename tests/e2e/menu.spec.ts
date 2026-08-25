@@ -146,7 +146,9 @@ test('клавиатура: F10 открывает, стрелки двигаю�
 test('клик мимо меню закрывает его', async () => {
   const { page } = launched;
   await openMenu();
-  await page.locator('#empty').click();
+  // Кликаем правый нижний угол: панель меню — левая, центр окна под ней.
+  const viewport = page.viewportSize() ?? { width: 480, height: 600 };
+  await page.mouse.click(viewport.width - 40, viewport.height - 40);
   await expect(page.locator('#menu')).toBeHidden();
 });
 
