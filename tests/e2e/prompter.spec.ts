@@ -193,6 +193,38 @@ test('6. прозрачность шагами меняется и отража�
   expect((await mainState()).opacity).toBe(before);
 });
 
+test('6b. при 0% прозрачности окно абсолютно непрозрачно', async () => {
+  const before = (await mainState()).opacity;
+
+  // Доводим до предела (0.8 → 1.0 на дефолте), сколько бы шагов ни понадобилось.
+  for (let i = 0; (await mainState()).opacity < 0.999; i++) {
+    if (i > 6) {
+      throw new Error('прозрачность не доходит до непрозрачности');
+    }
+    await mainInvoke('executeCommand', { type: 'opacity-down' });
+  }
+  expect((await mainState()).opacity).toBe(1);
+
+  // Фон .app без альфы (rgb, не rgba) — сквозь окно ничего не просвечивает.
+  const bg = await page.locator('.app').evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(bg).toBe('rgb(22, 24, 29)');
+
+  // В среднем режиме остаётся лёгкое «стекло» 0.94.
+  await mainInvoke('executeCommand', { type: 'opacity-up' });
+  await expect
+    .poll(async () => page.locator('.app').evaluate((el) => getComputedStyle(el).backgroundColor))
+    .toBe('rgba(22, 24, 29, 0.94)');
+
+  // Возвращаем стартовую окрестность (шаг 0.1 может перескочить точное
+  // значение), чтобы не протекать в остальные тесты.
+  while ((await mainState()).opacity < before - 0.051) {
+    await mainInvoke('executeCommand', { type: 'opacity-up' });
+  }
+  while ((await mainState()).opacity > before + 0.051) {
+    await mainInvoke('executeCommand', { type: 'opacity-down' });
+  }
+});
+
 test('7. автопрокрутка включается тоглом и скорость влияет на движение', async () => {
   const scrollPath = join(workDir, 'scroll.md');
   const paragraphs = Array.from({ length: 60 }, (_, i) => `Абзац номер ${i} с текстом.`);

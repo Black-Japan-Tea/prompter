@@ -31,7 +31,8 @@ html, body {
   margin: 0;
   border-radius: 10px;
   border: 1px solid var(--hairline);
-  background: rgba(22, 24, 29, 0.94);
+  /* Альфу фона ведёт renderer: при 0% прозрачности окно непрозрачно целиком. */
+  background: rgba(22, 24, 29, var(--surface-alpha, 0.94));
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
   overflow: hidden;
   transition: border-color 0.15s ease;

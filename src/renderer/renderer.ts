@@ -58,6 +58,12 @@ window.prompter.requestState();
 
 window.prompter.onStateChanged((state) => {
   document.documentElement.style.setProperty('--font-size', `${state.fontSize}px`);
+  // При 0% прозрачности окно обязано быть абсолютно непрозрачным:
+  // отключаем «стеклянную» альфу фона, просвечивание недопустимо.
+  document.documentElement.style.setProperty(
+    '--surface-alpha',
+    state.opacity >= 0.999 ? '1' : '0.94',
+  );
   scroller.setEnabled(state.autoScrollEnabled);
   scroller.setSpeed(state.autoScrollSpeed);
   header.update(state);
