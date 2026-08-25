@@ -201,19 +201,28 @@ test('7. автопрокрутка включается тоглом и ско�
   await mainInvoke('openFile', scrollPath);
   await expect(page.locator('#content h1')).toHaveText('Скролл');
 
+  // МЕДЛЕННАЯ скорость обязана двигаться: раньше дробные 0.4px/кадр
+  // стирались в целых scrollTop и прокрутка стояла. Окно показываем —
+  // в скрытом rAF троттлится и кадров почти нет.
+  await mainInvoke('executeCommand', { type: 'show-window' });
+  await mainInvoke('executeCommand', { type: 'autoscroll-speed', speed: 'slow' });
+  await mainInvoke('executeCommand', { type: 'autoscroll-toggle' });
+  await page.waitForTimeout(1100);
+  const scrollTopSlow = await page.evaluate(() => document.getElementById('viewer')?.scrollTop ?? 0);
+  expect(scrollTopSlow).toBeGreaterThan(15); // ~24px/s
+  await mainInvoke('executeCommand', { type: 'autoscroll-toggle' });
+
   await mainInvoke('executeCommand', { type: 'autoscroll-speed', speed: 'fast' });
-  // rAF троттлится в скрытом окне — показываем, как это бывает у живого пользователя.
-  await mainInvoke('toggleWindow');
   await mainInvoke('executeCommand', { type: 'autoscroll-toggle' });
   await expect(page.locator('#badge-autoscroll')).toBeVisible();
   await expect(page.locator('body')).toHaveClass(/autoscroll-on/);
 
   await page.waitForTimeout(900);
   const scrollTopFast = await page.evaluate(() => document.getElementById('viewer')?.scrollTop ?? 0);
-  expect(scrollTopFast).toBeGreaterThan(40);
+  expect(scrollTopFast).toBeGreaterThan(scrollTopSlow + 20);
 
   await mainInvoke('executeCommand', { type: 'autoscroll-toggle' });
-  await mainInvoke('toggleWindow');
+  await mainInvoke('executeCommand', { type: 'toggle-window' });
   expect((await mainState()).autoScrollEnabled).toBe(false);
 });
 

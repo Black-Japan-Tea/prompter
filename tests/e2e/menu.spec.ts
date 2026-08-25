@@ -67,6 +67,23 @@ test('клик по пункту исполняет команду, закрыв
   await expect(page.locator('#menu')).toBeHidden();
   await expect(page.locator('.toast')).toContainText('Прозрачность 25%');
   await expect((await mainState(launched.app)).opacity).toBe(0.75);
+
+  // Тост — пилюля в одну строку с центровкой.
+  const toastStyle = await page.locator('.toast').evaluate((el) => {
+    const style = getComputedStyle(el);
+    return { textAlign: style.textAlign, height: el.clientHeight };
+  });
+  expect(toastStyle.textAlign).toBe('center');
+  expect(toastStyle.height).toBeLessThan(55); // одна строка (две были бы ~64px)
+});
+
+test('кнопка ☰ не держит оранжевую фокус-подсветку после клика', async () => {
+  const { page } = launched;
+  await openMenu();
+  const outline = await page.locator('#btn-menu').evaluate(
+    (el) => getComputedStyle(el).outlineStyle,
+  );
+  expect(outline).toBe('none');
 });
 
 test('чекбокс автопрокрутки синхронизирован с состоянием', async () => {
