@@ -8,6 +8,7 @@ import { MenuView } from './menu/menu';
 import { ToastCenter } from './toast';
 import { initKeyboard } from './keyboard';
 import { BroadcastState } from '../shared/contracts';
+import { resolveMarkdownLink } from '../shared/markdownLinks';
 
 const viewerEl = requireElement('viewer');
 const viewer = new Viewer(document, new MarkdownRenderer());
@@ -33,8 +34,11 @@ initKeyboard({
 });
 
 let previousState: BroadcastState | null = null;
+/** Каталог текущего файла — база для относительных md-ссылок в конспекте. */
+let currentFile: string | null = null;
 
 window.prompter.onFileOpened(({ path, content }) => {
+  currentFile = path;
   viewer.show(content);
   header.setFileName(fileName(path));
   updateProgress();
@@ -45,8 +49,24 @@ window.prompter.onFileChanged(({ content }) => {
 });
 
 window.prompter.onFileRemoved(() => {
+  currentFile = null;
   viewer.clear();
   header.setFileName(null);
+});
+
+// md-ссылки внутри конспекта открываем системным приложением (Typora):
+// http(s) и прочее остаётся штатной навигацией окна.
+requireElement('content').addEventListener('click', (event) => {
+  const target = event.target as HTMLElement | null;
+  const anchor = target?.closest?.('a');
+  if (anchor === null || anchor === undefined) {
+    return;
+  }
+  const resolved = resolveMarkdownLink(anchor.getAttribute('href') ?? '', currentFile);
+  if (resolved !== null) {
+    event.preventDefault();
+    window.prompter.openExternalPath(resolved);
+  }
 });
 
 window.prompter.onNotify(({ level, message }) => {

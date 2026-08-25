@@ -1,4 +1,4 @@
-import { app, globalShortcut } from 'electron';
+import { app, globalShortcut, shell } from 'electron';
 import { join } from 'node:path';
 import { SettingsStore } from '../settings/SettingsStore';
 import { PrompterWindow } from '../window/PrompterWindow';
@@ -36,6 +36,10 @@ export class PrompterApp implements AppCommandTarget {
   private activeAccelerators: Partial<Record<AppCommandType, string>> = {};
   /** Активные хоткеи скоростей (с фолбэками). */
   private speedAccelerators: Record<AutoScrollSpeed, string> = { ...SPEED_ACCELERATORS };
+  /** Открыватель внешних путей: shell.openPath, подменяется тест-хуком. */
+  private externalOpener: (path: string) => Promise<string> = (path) => shell.openPath(path);
+  /** Последний путь, запрошенный md-ссылкой (диагностика/E2E). */
+  private lastOpenedExternalPath: string | null = null;
 
   constructor() {
     this.settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
@@ -64,6 +68,7 @@ export class PrompterApp implements AppCommandTarget {
       hideWindow: () => this.hideWindow(),
       quit: () => this.quit(),
       requestState: () => this.broadcast(),
+      openExternalPath: (path) => void this.openExternalPath(path),
     });
     this.registerHotkeysWithFallbacks();
     this.tray.showStartupHint();
@@ -250,6 +255,20 @@ export class PrompterApp implements AppCommandTarget {
     this.doc.simulateNextPick(path);
   }
 
+  /** md-ссылка из конспекта: открыть файл приложением ОС по ассоциации. */
+  async openExternalPath(path: string): Promise<void> {
+    if (process.env.PROMPTER_TEST_HOOKS === '1') {
+      // В тестах не поднимаем Typora: фиксируем путь для ассертов.
+      this.lastOpenedExternalPath = path;
+      return;
+    }
+    const error = await this.externalOpener(path);
+    this.lastOpenedExternalPath = path;
+    if (error !== '') {
+      this.notify('error', `Не удалось открыть ${baseName(path)}: ${error}`);
+    }
+  }
+
   dispatchAccelerator(accelerator: string): void {
     this.shortcuts.dispatch(accelerator);
   }
@@ -266,6 +285,7 @@ export class PrompterApp implements AppCommandTarget {
     currentFile: string | null;
     trayAlive: boolean;
     registeredShortcuts: string[];
+    lastOpenedExternalPath: string | null;
   } {
     return {
       ...this.broadcastState(),
@@ -276,6 +296,7 @@ export class PrompterApp implements AppCommandTarget {
       currentFile: this.doc.currentPath,
       trayAlive: this.tray.isAlive,
       registeredShortcuts: this.shortcuts.registered(),
+      lastOpenedExternalPath: this.lastOpenedExternalPath,
     };
   }
 

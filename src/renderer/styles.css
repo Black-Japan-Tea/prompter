@@ -259,6 +259,11 @@ body.autoscroll-on .bar:hover { opacity: 1; }
   user-select: text;
 }
 
+/* Выделение текста — фирменный оранжевый вместо системной синей заливки. */
+::selection {
+  background: rgba(253, 101, 0, 0.45);
+}
+
 .viewer::-webkit-scrollbar { width: 6px; }
 .viewer::-webkit-scrollbar-thumb { background: rgba(154, 160, 172, 0.3); border-radius: 3px; }
 

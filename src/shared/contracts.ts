@@ -13,6 +13,8 @@ export const IPC = {
   command: 'prompter:command',
   notify: 'prompter:notify',
   requestState: 'prompter:request-state',
+  /** Открыть путь системным приложением (md-ссылка → Typora и т.п.). */
+  openExternalPath: 'prompter:open-external-path',
 } as const;
 
 /** Полное содержимое файла при открытии. */
@@ -174,4 +176,6 @@ export interface PrompterApi {
   requestState(): void;
   /** Путь файла из drag&drop: в современном Electron только так. */
   filePathFor(file: File): string;
+  /** Открыть файл ассоциированным приложением ОС (md-ссылки → Typora). */
+  openExternalPath(path: string): void;
 }
