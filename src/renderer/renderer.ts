@@ -12,9 +12,10 @@ import { BroadcastState } from '../shared/contracts';
 const viewerEl = requireElement('viewer');
 const viewer = new Viewer(document, new MarkdownRenderer());
 const scroller = new AutoScroller(viewerEl, window);
+// Обе кнопки шапки (– и ✕) прячут окно: приложение живёт в трее.
 const header = new Header(document, {
   onHide: () => window.prompter.runCommand({ type: 'hide-window' }),
-  onQuit: () => window.prompter.runCommand({ type: 'quit' }),
+  onQuit: () => window.prompter.runCommand({ type: 'hide-window' }),
 });
 const menu = new MenuView(requireElement('menu'), requireElement('btn-menu'), (command) => {
   window.prompter.runCommand(command);
@@ -26,7 +27,6 @@ initKeyboard({
   isMenuOpen: () => menu.isOpen,
   openMenu: () => menu.open(),
   closeMenu: () => menu.close(),
-  hideWindow: () => window.prompter.runCommand({ type: 'hide-window' }),
   openFile: () => window.prompter.runCommand({ type: 'open-file' }),
   quit: () => window.prompter.runCommand({ type: 'quit' }),
   changeFontSize: (delta) => changeFontSize(delta),
@@ -138,6 +138,15 @@ function announceChanges(state: BroadcastState): void {
       state.clickThrough
         ? 'Клик-сквозь: вкл — окно не ловит мышь (Ctrl+Alt+T выключит)'
         : 'Клик-сквозь: выкл',
+    );
+  }
+  if (state.captureProtection !== previous.captureProtection) {
+    // Предупреждение дублируем тостом: выключенная защита — риск засветить конспект.
+    toasts.show(
+      state.captureProtection
+        ? 'Окно снова невидимо в трансляции'
+        : 'ВНИМАНИЕ: окно видно в трансляции экрана',
+      state.captureProtection ? 'info' : 'error',
     );
   }
   if (state.alwaysOnTop !== previous.alwaysOnTop) {

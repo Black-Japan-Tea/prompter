@@ -40,7 +40,7 @@ export class PrompterWindow {
     });
 
     this.win.setAlwaysOnTop(settings.alwaysOnTop, 'screen-saver');
-    this.applyContentProtection();
+    this.applyContentProtection(settings.captureProtection);
     // Крестик и системные жесты не убивают приложение — только прячут окно.
     // При настоящем выходе (prepareForQuit) закрытие разрешаем.
     this.win.on('close', (event) => {
@@ -61,14 +61,18 @@ export class PrompterWindow {
     this.quitting = true;
   }
 
-  /** Тот самый вызов, прячущий окно из трансляций: setContentProtection. */
-  private applyContentProtection(): void {
-    this.win.setContentProtection(true);
-    this.contentProtectionOn = true;
+  /** Управление невидимостью в трансляциях: SetWindowDisplayAffinity. */
+  private applyContentProtection(enabled: boolean): void {
+    this.win.setContentProtection(enabled);
+    this.contentProtectionOn = enabled;
   }
 
   get isContentProtected(): boolean {
     return this.contentProtectionOn;
+  }
+
+  setContentProtectionEnabled(enabled: boolean): void {
+    this.applyContentProtection(enabled);
   }
 
   get isSkipTaskbar(): boolean {

@@ -75,8 +75,6 @@ export class PrompterApp implements AppCommandTarget {
 
     const singleKeyCommands: Array<[AppCommandType, () => void]> = [
       ['toggle-window', () => this.toggleWindow()],
-      ['show-window', () => this.showWindow()],
-      ['hide-window', () => this.hideWindow()],
       ['open-file', () => this.openViaDialog()],
       ['open-recent', () => this.repeatLastFile()],
       ['repeat-last-file', () => this.repeatLastFile()],
@@ -85,6 +83,7 @@ export class PrompterApp implements AppCommandTarget {
       ['autoscroll-toggle', () => this.toggleAutoScroll()],
       ['clickthrough-toggle', () => this.toggleClickThrough()],
       ['always-top-toggle', () => this.toggleAlwaysOnTop()],
+      ['capture-protection-toggle', () => this.toggleCaptureProtection()],
       ['quit', () => this.quit()],
     ];
 
@@ -216,6 +215,17 @@ export class PrompterApp implements AppCommandTarget {
     this.broadcast();
   }
 
+  toggleCaptureProtection(): void {
+    const next = !this.settings.load().captureProtection;
+    this.settings.update({ captureProtection: next });
+    this.window.setContentProtectionEnabled(next);
+    this.tray.refresh();
+    this.broadcast();
+    if (!next) {
+      this.notify('error', 'ВНИМАНИЕ: окно снова видно в трансляции экрана');
+    }
+  }
+
   // ── Диагностика и тест-хуки ────────────────────────────────────
   simulateNextPick(path: string | null): void {
     this.doc.simulateNextPick(path);
@@ -293,6 +303,7 @@ export class PrompterApp implements AppCommandTarget {
       opacity: this.opacity.value,
       clickThrough: s.clickThrough,
       alwaysOnTop: s.alwaysOnTop,
+      captureProtection: s.captureProtection,
       recentFiles: this.doc.recentList(),
       accelerators: this.activeAccelerators,
     };
@@ -304,6 +315,7 @@ export class PrompterApp implements AppCommandTarget {
       autoScrollSpeed: () => this.settings.load().autoScroll.speed,
       clickThroughEnabled: () => this.settings.load().clickThrough,
       alwaysTopEnabled: () => this.settings.load().alwaysOnTop,
+      captureProtectionEnabled: () => this.settings.load().captureProtection,
       recentFiles: () => this.doc.recentList(),
       accelerators: () => this.activeAccelerators,
     };

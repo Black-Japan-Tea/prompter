@@ -223,12 +223,12 @@ body.autoscroll-on .bar:hover { opacity: 1; }
   font-size: 15px;
   line-height: 1;
   cursor: pointer;
-  opacity: 0;
+  /* Кнопки меню/свернуть/закрыть видимы всегда, без охоты за ховером. */
+  opacity: 0.85;
   transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
-.bar:hover .btn { opacity: 1; }
-.btn:hover { background: rgba(255, 255, 255, 0.08); color: var(--text); }
+.btn:hover { background: rgba(255, 255, 255, 0.08); color: var(--text); opacity: 1; }
 .btn-danger:hover { background: rgba(229, 72, 77, 0.25); color: #ffb3b6; }
 
 /* ── Контент ──────────────────────────────────────────────────── */

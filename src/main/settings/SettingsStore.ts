@@ -77,6 +77,9 @@ export class SettingsStore {
     if (typeof patch.alwaysOnTop === 'boolean') {
       next.alwaysOnTop = patch.alwaysOnTop;
     }
+    if (typeof patch.captureProtection === 'boolean') {
+      next.captureProtection = patch.captureProtection;
+    }
     if (Array.isArray(patch.recentFiles)) {
       next.recentFiles = patch.recentFiles.filter((item): item is string => typeof item === 'string');
     }

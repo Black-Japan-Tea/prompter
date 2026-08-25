@@ -63,6 +63,13 @@ export function buildMenuItems(state: BroadcastState): MenuItemModel[] {
       checked: state.clickThrough,
     },
     {
+      id: 'capture-protection',
+      kind: 'checkbox',
+      label: 'Невидимо в трансляции',
+      accelerator: accel('capture-protection-toggle'),
+      checked: state.captureProtection,
+    },
+    {
       id: 'always-top',
       kind: 'checkbox',
       label: 'Поверх всех окон',
@@ -70,7 +77,7 @@ export function buildMenuItems(state: BroadcastState): MenuItemModel[] {
       checked: state.alwaysOnTop,
     },
     { id: 'sep-4', kind: 'separator', label: '' },
-    { id: 'hide', kind: 'item', label: 'Спрятать окно', accelerator: 'Esc' },
+    { id: 'hide', kind: 'item', label: 'Спрятать окно' },
     { id: 'quit', kind: 'item', label: 'Выход', accelerator: 'Ctrl+Q' },
   );
   return items;
@@ -101,6 +108,9 @@ export function commandForItem(id: string): AppCommand | null {
   }
   if (id === 'clickthrough') {
     return { type: 'clickthrough-toggle' };
+  }
+  if (id === 'capture-protection') {
+    return { type: 'capture-protection-toggle' };
   }
   if (id === 'always-top') {
     return { type: 'always-top-toggle' };

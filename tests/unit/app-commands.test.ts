@@ -7,9 +7,9 @@ import {
 } from '../../src/shared/contracts';
 import { parseCommandPayload } from '../../src/main/app/commands';
 
-describe('ACCELERATORS — у каждой команды есть хоткей', () => {
-  it('покрывает все типы команд без пропусков', () => {
-    for (const type of COMMAND_TYPES) {
+describe('ACCELERATORS — у каждой хоткейной команды есть хоткей', () => {
+  it('покрывает все хоткейные команды без пропусков', () => {
+    for (const type of HOTKEYED_COMMAND_TYPES) {
       expect(
         ACCELERATORS[type],
         `у команды «${type}» нет хоткея`,
@@ -18,7 +18,7 @@ describe('ACCELERATORS — у каждой команды есть хоткей'
   });
 
   it('все хоткеи уникальны', () => {
-    const values = Object.values(ACCELERATORS);
+    const values = Object.values(ACCELERATORS).filter((value) => value !== '');
     expect(new Set(values).size).toBe(values.length);
   });
 

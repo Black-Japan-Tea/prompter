@@ -5,6 +5,7 @@ import {
 } from '../../shared/contracts';
 import { AutoScrollSpeed } from '../../shared/settings';
 import { AppCommandTarget } from './commands';
+import type { TrayActions } from '../tray/TrayService';
 
 /**
  * Выбирает первый свободный акселератор из первичного и фолбэков.
@@ -53,6 +54,7 @@ export interface TrayStateSource {
   autoScrollSpeed(): AutoScrollSpeed;
   clickThroughEnabled(): boolean;
   alwaysTopEnabled(): boolean;
+  captureProtectionEnabled(): boolean;
   recentFiles(): readonly string[];
   accelerators(): Partial<Record<AppCommandType, string>>;
 }
@@ -60,26 +62,11 @@ export interface TrayStateSource {
 export function trayActionsFrom(
   app: AppCommandTarget,
   state: TrayStateSource,
-): {
-  toggleWindow(): void;
-  openFile(): void;
-  openRecent(path: string): void;
-  recentFiles(): readonly string[];
-  opacityStepUp(): void;
-  opacityStepDown(): void;
-  autoScrollEnabled(): boolean;
-  toggleAutoScroll(): void;
-  autoScrollSpeed(): AutoScrollSpeed;
-  setAutoScrollSpeed(speed: AutoScrollSpeed): void;
-  clickThroughEnabled(): boolean;
-  toggleClickThrough(): void;
-  alwaysTopEnabled(): boolean;
-  toggleAlwaysTop(): void;
-  accelerators(): Partial<Record<AppCommandType, string>>;
-  quit(): void;
-} {
+): TrayActions {
   return {
     toggleWindow: () => app.toggleWindow(),
+    showWindow: () => app.showWindow(),
+    hideWindow: () => app.hideWindow(),
     openFile: () => void app.openViaDialog(),
     openRecent: (path: string) => app.openFile(path),
     recentFiles: () => state.recentFiles(),
@@ -93,6 +80,8 @@ export function trayActionsFrom(
     toggleClickThrough: () => app.toggleClickThrough(),
     alwaysTopEnabled: () => state.alwaysTopEnabled(),
     toggleAlwaysTop: () => app.toggleAlwaysOnTop(),
+    captureProtectionEnabled: () => state.captureProtectionEnabled(),
+    toggleCaptureProtection: () => app.toggleCaptureProtection(),
     accelerators: () => state.accelerators(),
     quit: () => app.quit(),
   };

@@ -23,6 +23,7 @@ export interface AppSettings {
   autoScroll: AutoScrollSettings;
   clickThrough: boolean;
   alwaysOnTop: boolean;
+  captureProtection: boolean;
   recentFiles: string[];
 }
 
@@ -34,5 +35,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoScroll: { enabled: false, speed: 'medium' },
   clickThrough: false,
   alwaysOnTop: true,
+  captureProtection: true,
   recentFiles: [],
 };
