@@ -40,12 +40,17 @@ describe('paintIcon — форма и цвета', () => {
     expect(pixel(icon, Math.floor(size / 2), Math.floor(size / 2))[3]).toBe(255);
   });
 
-  it('градиент: красный канал растёт от левого верхнего к правому нижнему', () => {
-    // Индиго (99,102,241) → фиолет (139,92,246): тёплого больше внизу справа.
+  it('градиент: тёплые каналы растут от левого верхнего к правому нижнему', () => {
+    // Оранжевый бренд: #FD6500 (253,101,0) → #FF8A3A (255,138,58).
     const topLeft = pixel(icon, Math.floor(size * 0.2), Math.floor(size * 0.2));
     const bottomRight = pixel(icon, Math.floor(size * 0.82), Math.floor(size * 0.82));
-    expect(bottomRight[0]).toBeGreaterThan(topLeft[0]);
-    expect(topLeft[2]).toBeGreaterThan(topLeft[0]); // синий доминирует в индиго
+    expect(bottomRight[1]).toBeGreaterThan(topLeft[1]); // зелёный растёт
+    expect(bottomRight[2]).toBeGreaterThan(topLeft[2]); // синий растёт
+  });
+
+  it('оранжевый доминирует: красный канал сильно больше синего', () => {
+    const topLeft = pixel(icon, Math.floor(size * 0.2), Math.floor(size * 0.2));
+    expect(topLeft[0]).toBeGreaterThan(topLeft[2] + 150); // 253 против ~0
   });
 
   it('в иконке есть белые пиксели пузыря', () => {
@@ -53,8 +58,8 @@ describe('paintIcon — форма и цвета', () => {
     expect(whites).toBeGreaterThan(50);
   });
 
-  it('в иконке есть акцентные пиксели строк текста (синий доминирует)', () => {
-    const accents = countWhere(icon, ([r, , b, a]) => a === 255 && b > 200 && r < 180);
+  it('в иконке есть акцентные пиксели строк текста (оранжевый доминирует)', () => {
+    const accents = countWhere(icon, ([r, , b, a]) => a === 255 && r > 180 && b < 120);
     expect(accents).toBeGreaterThan(50);
   });
 });
