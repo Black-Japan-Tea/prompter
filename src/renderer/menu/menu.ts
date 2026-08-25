@@ -265,7 +265,9 @@ export class MenuView {
         return;
       }
       const target = event.target as Node;
-      if (!this.container.contains(target) && target !== this.trigger) {
+      // Клик по SVG-полоскам внутри кнопки — это клик по кнопке (тогл),
+      // а не «мимо»: строгая проверка target !== trigger пересылала меню.
+      if (!this.container.contains(target) && !this.trigger.contains(target)) {
         this.close();
       }
     }, true);

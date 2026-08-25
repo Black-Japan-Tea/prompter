@@ -150,6 +150,22 @@ test('клик мимо меню закрывает его', async () => {
   await expect(page.locator('#menu')).toBeHidden();
 });
 
+test('повторный клик по ☰ закрывает меню — включая клик по самим SVG-полоскам', async () => {
+  const { page } = launched;
+  // Регрессия: клик по <svg>/<rect> внутри кнопки считался «кликом мимо»
+  // и пересылал меню (capture-закрытие + bubbling-открытие).
+  await page.locator('#btn-menu').click();
+  await expect(page.locator('#menu')).toBeVisible();
+  await page.locator('#btn-menu').click();
+  await expect(page.locator('#menu')).toBeHidden();
+
+  // Клик прямо по полоскам (rect) — тот же тогл, не «клик мимо».
+  await page.locator('#btn-menu svg rect').first().click();
+  await expect(page.locator('#menu')).toBeVisible();
+  await page.locator('#btn-menu svg').click();
+  await expect(page.locator('#menu')).toBeHidden();
+});
+
 test('недавние файлы отображаются и открываются из меню', async () => {
   const { page } = launched;
   await mainInvoke(launched.app, 'openFile', join(workDir, 'alpha.md'));
