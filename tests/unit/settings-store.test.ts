@@ -96,4 +96,19 @@ describe('SettingsStore', () => {
     expect(loaded.autoScroll).toEqual({ enabled: true, speed: 'fast' });
     expect(loaded.opacity).toBe(0.3);
   });
+
+  it('сохраняет список недавних файлов', () => {
+    const path = settingsPath();
+    const store = new SettingsStore(path);
+    store.update({ recentFiles: ['C:/a.md', 'C:/b.md'] });
+
+    expect(new SettingsStore(path).load().recentFiles).toEqual(['C:/a.md', 'C:/b.md']);
+  });
+
+  it('фильтрует не-строки из списка недавних в файле', () => {
+    const path = settingsPath();
+    writeFileSync(path, JSON.stringify({ recentFiles: ['C:/a.md', 42, null] }), 'utf8');
+
+    expect(new SettingsStore(path).load().recentFiles).toEqual(['C:/a.md']);
+  });
 });
