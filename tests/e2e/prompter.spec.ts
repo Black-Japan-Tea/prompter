@@ -6,7 +6,7 @@ import {
   type Page,
 } from '@playwright/test';
 import { execFile } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -301,4 +301,37 @@ test('9. второй экземпляр не живёт: показывает �
   await expect
     .poll(async () => (await mainState()).windowVisible, { timeout: 5000 })
     .toBe(true);
+});
+
+test('10. md-ссылка в конспекте открывается системным приложением по ассоциации', async () => {
+  writeFileSync(join(workDir, 'guide.md'), '# Гайд', 'utf8');
+  mkdirSync(join(workDir, 'sub'), { recursive: true });
+  writeFileSync(join(workDir, 'sub', 'deep.md'), '# Глубокий', 'utf8');
+  const linker = join(workDir, 'linker.md');
+  writeFileSync(linker, '[Гайд](guide.md) · [Глубокий](sub/deep.md) · [Сайт](https://example.com)', 'utf8');
+  await mainInvoke('openFile', linker);
+
+  // Относительная ссылка от каталога файла.
+  await page.locator('#content a', { hasText: 'Гайд' }).click();
+  await expect
+    .poll(async () => (await mainState()).lastOpenedExternalPath)
+    .toBe(join(workDir, 'guide.md'));
+
+  // Вложенный путь резолвится каталогом текущего файла.
+  await page.locator('#content a', { hasText: 'Глубокий' }).click();
+  await expect
+    .poll(async () => (await mainState()).lastOpenedExternalPath)
+    .toBe(join(workDir, 'sub', 'deep.md'));
+
+  // https-ссылки не идут через внешний путь (остаются навигацией окна).
+  await page.locator('#content a', { hasText: 'Сайт' }).click();
+  await page.waitForTimeout(300);
+  expect((await mainState()).lastOpenedExternalPath).toBe(join(workDir, 'sub', 'deep.md'));
+});
+
+test('11. выделение текста заливается фирменным оранжевым', async () => {
+  const selectionBg = await page.locator('#content').evaluate(
+    (el) => getComputedStyle(el, '::selection').backgroundColor,
+  );
+  expect(selectionBg).toBe('rgba(253, 101, 0, 0.45)');
 });
