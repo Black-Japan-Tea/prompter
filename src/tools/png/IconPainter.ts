@@ -1,10 +1,11 @@
 import { RgbaImage, createImage, blendPixel } from './RgbaImage';
 
-// Фирменные цвета: индиго → фиолет, белый пузырь, строки чуть темнее индиго.
-const INDIGO: readonly [number, number, number] = [99, 102, 241];
-const VIOLET: readonly [number, number, number] = [139, 92, 246];
+// Фирменные цвета: оранжевый #FD6500 → тёплый #FF8A3A, белый пузырь,
+// строки текста — темнее базового оранжевого для контраста на белом.
+const ORANGE_FROM: readonly [number, number, number] = [253, 101, 0];
+const ORANGE_TO: readonly [number, number, number] = [255, 138, 58];
 const WHITE: readonly [number, number, number] = [242, 244, 251];
-const BAR: readonly [number, number, number] = [91, 94, 230];
+const BAR: readonly [number, number, number] = [214, 83, 0];
 
 type Color = readonly [number, number, number];
 
@@ -95,7 +96,7 @@ function paintBackground(image: RgbaImage): void {
       const cov = coverage(d);
       if (cov > 0) {
         const t = (x + y) / (2 * (size - 1));
-        blendPixel(image, x, y, mix(INDIGO, VIOLET, t), cov);
+        blendPixel(image, x, y, mix(ORANGE_FROM, ORANGE_TO, t), cov);
       }
     }
   }

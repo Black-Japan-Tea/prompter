@@ -1,12 +1,12 @@
-/* Палитра «Графит + индиго»: тёмное окно суфлёра с акцентом градиента иконки. */
+/* Палитра «Графит + оранжевый»: тёмное окно суфлёра с акцентом градиента иконки. */
 :root {
   --bg: #16181d;
   --surface: #1c1f26;
   --text: #e8eaf0;
   --muted: #9aa0ac;
-  --accent-from: #6366f1;
-  --accent-to: #8b5cf6;
-  --accent: #7c7cf5;
+  --accent-from: #fd6500;
+  --accent-to: #ff8a3a;
+  --accent: #fd6500;
   --hairline: rgba(255, 255, 255, 0.08);
   --font-size: 17px;
 }
@@ -39,7 +39,7 @@ html, body {
 
 body.drag-over .app {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent), 0 12px 44px rgba(124, 124, 245, 0.35);
+  box-shadow: 0 0 0 1px var(--accent), 0 12px 44px rgba(253, 101, 0, 0.35);
 }
 
 /* ── Шапка: зона перетаскивания окна ─────────────────────────── */
@@ -83,8 +83,8 @@ body.autoscroll-on .bar:hover { opacity: 1; }
 
 .badge-accent {
   color: #dfe0ff;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.35), rgba(139, 92, 246, 0.35));
-  border-color: rgba(124, 124, 245, 0.5);
+  background: linear-gradient(135deg, rgba(253, 101, 0, 0.35), rgba(255, 138, 58, 0.35));
+  border-color: rgba(253, 101, 0, 0.5);
 }
 
 .controls { display: flex; gap: 4px; -webkit-app-region: no-drag; }
@@ -139,7 +139,7 @@ body.autoscroll-on .bar:hover { opacity: 1; }
 }
 
 .menu-item:hover, .menu-item:focus-visible {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.35), rgba(139, 92, 246, 0.35));
+  background: linear-gradient(135deg, rgba(253, 101, 0, 0.35), rgba(255, 138, 58, 0.35));
   outline: none;
 }
 
@@ -240,7 +240,7 @@ body.autoscroll-on .bar:hover { opacity: 1; }
    клавиатурный фокус остаётся видимым для доступности. */
 .btn:focus { outline: none; }
 .btn:focus-visible {
-  outline: 2px solid rgba(124, 124, 245, 0.7);
+  outline: 2px solid rgba(253, 101, 0, 0.7);
   outline-offset: -2px;
 }
 
