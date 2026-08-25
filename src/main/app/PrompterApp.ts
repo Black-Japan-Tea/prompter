@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { SettingsStore } from '../settings/SettingsStore';
 import { PrompterWindow } from '../window/PrompterWindow';
 import { TrayService } from '../tray/TrayService';
+import { buildTrayIcon } from '../tray/trayIcon';
 import { ShortcutManager } from '../shortcuts/ShortcutManager';
 import { OpacityController, OpacityView } from '../state/OpacityController';
 import { AutoScrollSpeed } from '../../shared/settings';
@@ -42,7 +43,10 @@ export class PrompterApp implements AppCommandTarget {
     this.window = new PrompterWindow(loaded);
     this.opacity = new OpacityController(this.opacityView(), loaded.opacity);
     this.doc = new DocumentController(this.settings, this.documentEvents());
-    this.tray = new TrayService(this.trayIconPath(), trayActionsFrom(this, this.stateSource()));
+    this.tray = new TrayService(
+      buildTrayIcon(join(app.getAppPath(), 'assets', 'icons')),
+      trayActionsFrom(this, this.stateSource()),
+    );
     this.shortcuts = new ShortcutManager(this.shortcutHost());
     if (loaded.clickThrough) {
       this.window.setClickThrough(true);
@@ -350,10 +354,6 @@ export class PrompterApp implements AppCommandTarget {
         globalShortcut.register(accelerator, () => this.shortcuts.dispatch(accelerator)),
       unregister: (accelerator: string) => globalShortcut.unregister(accelerator),
     };
-  }
-
-  private trayIconPath(): string {
-    return join(app.getAppPath(), 'assets', 'icons', 'tray.png');
   }
 }
 

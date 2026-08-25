@@ -1,4 +1,4 @@
-import { Menu, Tray, nativeImage } from 'electron';
+import { Menu, Tray } from 'electron';
 import { AutoScrollSpeed } from '../../shared/settings';
 import { ACCELERATORS, AppCommandType } from '../../shared/contracts';
 
@@ -38,8 +38,10 @@ export class TrayService {
   private readonly tray: Tray;
   private readonly icon: Electron.NativeImage;
 
-  constructor(iconPath: string, private readonly actions: TrayActions) {
-    this.icon = nativeImage.createFromPath(iconPath);
+  constructor(icon: Electron.NativeImage, private readonly actions: TrayActions) {
+    // Иконка приходит с per-DPI представлениями: слот трея Windows
+    // выбирает точный размер без системного даунскейла (чёткая галочка).
+    this.icon = icon;
     this.tray = new Tray(this.icon);
     this.tray.setToolTip('Prompter — суфлёр для Markdown\nДвойной клик — показать окно');
     this.tray.setContextMenu(this.buildMenu());
