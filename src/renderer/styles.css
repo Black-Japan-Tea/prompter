@@ -98,6 +98,9 @@ body.autoscroll-on .bar:hover { opacity: 1; }
   justify-content: center;
   color: var(--muted);
   opacity: 0.85;
+  /* Шапка — drag-зона окна: без no-drag живой клик уходит в перетаскивание
+     и click не стреляет (синтетические клики тестов этого не ловят). */
+  -webkit-app-region: no-drag;
   /* Постоянная фирменная окантовка: меню — главная кнопка приложения.
      Специфичность .btn.btn-menu нужна, чтобы перебить border:0 у .btn. */
   border: 1px solid var(--accent);
