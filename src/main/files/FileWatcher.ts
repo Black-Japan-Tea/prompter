@@ -11,22 +11,18 @@ export type FileEvent = 'changed' | 'removed';
 export class FileWatcher {
   private watcher: FSWatcher | null = null;
   private timer: NodeJS.Timeout | null = null;
-  private notify: (event: FileEvent) => void = () => undefined;
 
-  constructor(
-    private readonly filePath: string,
-    private readonly debounceMs: number = 150,
-  ) {}
+  constructor(private readonly debounceMs: number = 150) {}
 
-  start(onEvent: (event: FileEvent) => void): void {
+  /** Начать (или перезапустить) слежение за указанным файлом. */
+  start(filePath: string, onEvent: (event: FileEvent) => void): void {
     this.stop();
-    this.notify = onEvent;
-    if (!existsSync(this.filePath)) {
+    if (!existsSync(filePath)) {
       // Файла нет — это тоже состояние, о котором UI должен узнать сразу.
-      this.notify('removed');
+      onEvent('removed');
       return;
     }
-    this.watcher = watch(this.filePath, () => this.schedule());
+    this.watcher = watch(filePath, () => this.schedule(filePath, onEvent));
   }
 
   stop(): void {
@@ -38,13 +34,16 @@ export class FileWatcher {
     this.watcher = null;
   }
 
-  private schedule(): void {
+  private schedule(
+    filePath: string,
+    onEvent: (event: FileEvent) => void,
+  ): void {
     if (this.timer !== null) {
       clearTimeout(this.timer);
     }
     this.timer = setTimeout(() => {
       this.timer = null;
-      this.notify(existsSync(this.filePath) ? 'changed' : 'removed');
+      onEvent(existsSync(filePath) ? 'changed' : 'removed');
     }, this.debounceMs);
   }
 }
