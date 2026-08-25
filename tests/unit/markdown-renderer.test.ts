@@ -54,9 +54,12 @@ describe('MarkdownRenderer — санитизация', () => {
     expect(html).not.toContain('onerror');
   });
 
-  it('вырезает javascript:-ссылки', () => {
+  it('не создаёт активную ссылку из javascript:-url', () => {
     const html = new MarkdownRenderer().render('[клик](javascript:alert(1))');
-    expect(html).not.toContain('javascript:');
+    // Инвариант безопасности: опасного href быть не должно.
+    // Сам текст «javascript:» markdown-it законно оставляет как обычные символы.
+    expect(html).not.toContain('href="javascript:');
+    expect(html).not.toContain('<a ');
   });
 
   it('сохраняет безопасные inline-теги', () => {
