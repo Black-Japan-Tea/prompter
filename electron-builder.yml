@@ -1,0 +1,27 @@
+appId: com.jobka.prompter
+productName: Prompter
+copyright: Jobka
+directories:
+  output: release
+files:
+  - dist/**/*
+  - assets/**/*
+  - package.json
+asar: true
+win:
+  icon: assets/icons/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Prompter
+  artifactName: Prompter-Setup-${version}.${ext}
+portable:
+  artifactName: Prompter-Portable-${version}.${ext}
