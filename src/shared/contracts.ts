@@ -10,6 +10,8 @@ export const IPC = {
   fontSizeRequest: 'prompter:font-size-request',
   hideWindowRequest: 'prompter:hide-window-request',
   quitRequest: 'prompter:quit-request',
+  command: 'prompter:command',
+  notify: 'prompter:notify',
 } as const;
 
 /** Полное содержимое файла при открытии. */
@@ -23,6 +25,67 @@ export interface ContentPayload {
   content: string;
 }
 
+/** Команды приложения: единый вход для меню окна, трея и хоткеев. */
+export type AppCommand =
+  | { type: 'toggle-window' }
+  | { type: 'show-window' }
+  | { type: 'hide-window' }
+  | { type: 'open-file' }
+  | { type: 'open-recent'; path: string }
+  | { type: 'repeat-last-file' }
+  | { type: 'opacity-up' }
+  | { type: 'opacity-down' }
+  | { type: 'autoscroll-toggle' }
+  | { type: 'autoscroll-speed'; speed: AutoScrollSpeed }
+  | { type: 'clickthrough-toggle' }
+  | { type: 'always-top-toggle' }
+  | { type: 'quit' };
+
+export type AppCommandType = AppCommand['type'];
+
+/** Все типы команд — для полноты реестра хоткеев в тестах. */
+export const COMMAND_TYPES: readonly AppCommandType[] = [
+  'toggle-window',
+  'show-window',
+  'hide-window',
+  'open-file',
+  'open-recent',
+  'repeat-last-file',
+  'opacity-up',
+  'opacity-down',
+  'autoscroll-toggle',
+  'autoscroll-speed',
+  'clickthrough-toggle',
+  'always-top-toggle',
+  'quit',
+];
+
+/**
+ * Глобальные акселераторы: у каждой команды — хоткей.
+ * In-window дополнения (Esc, Ctrl+O, Ctrl+Q, Ctrl+=/-, F10) живут в renderer.
+ */
+export const ACCELERATORS: Record<AppCommandType, string> = {
+  'toggle-window': 'Control+Alt+P',
+  'show-window': 'Control+Alt+S',
+  'hide-window': 'Control+Alt+H',
+  'open-file': 'Control+Alt+O',
+  'open-recent': 'Control+Alt+R',
+  'repeat-last-file': 'Control+Alt+Enter',
+  'opacity-up': 'Control+Alt+=',
+  'opacity-down': 'Control+Alt+-',
+  'autoscroll-toggle': 'Control+Alt+Space',
+  'autoscroll-speed': 'Control+Alt+1..3',
+  'clickthrough-toggle': 'Control+Alt+T',
+  'always-top-toggle': 'Control+Alt+A',
+  quit: 'Control+Alt+Q',
+};
+
+/** Сообщения для тостов: ошибки и важные события из main. */
+export interface NotifyPayload {
+  level: 'info' | 'error';
+  message: string;
+}
+
 /** Состояние приложения, транслируемое в renderer при любом изменении. */
 export interface BroadcastState {
   fileName: string | null;
@@ -31,6 +94,8 @@ export interface BroadcastState {
   fontSize: number;
   opacity: number;
   clickThrough: boolean;
+  alwaysOnTop: boolean;
+  recentFiles: readonly string[];
 }
 
 /** API, которое preload выставляет в renderer через contextBridge. */
@@ -39,8 +104,10 @@ export interface PrompterApi {
   onFileChanged(handler: (payload: ContentPayload) => void): () => void;
   onFileRemoved(handler: () => void): () => void;
   onStateChanged(handler: (state: BroadcastState) => void): () => void;
+  onNotify(handler: (payload: NotifyPayload) => void): () => void;
   openFile(path: string): void;
   setFontSize(size: number): void;
+  runCommand(command: AppCommand): void;
   hideWindow(): void;
   quit(): void;
   /** Путь файла из drag&drop: в современном Electron только так. */

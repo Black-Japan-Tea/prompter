@@ -38,6 +38,11 @@ export class ShortcutManager {
     this.handlers.get(accelerator)?.();
   }
 
+  /** Активные акселераторы — для диагностики и проверок покрытия хоткеев. */
+  registered(): string[] {
+    return [...this.handlers.keys()];
+  }
+
   dispose(): void {
     for (const accelerator of this.handlers.keys()) {
       this.host.unregister(accelerator);
