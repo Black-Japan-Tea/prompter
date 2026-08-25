@@ -86,6 +86,17 @@ test('кнопка ☰ не держит оранжевую фокус-подс�
   expect(outline).toBe('none');
 });
 
+test('кнопка ☰ имеет постоянную оранжевую окантовку', async () => {
+  const { page } = launched;
+  const border = await page.locator('#btn-menu').evaluate((el) => {
+    const style = getComputedStyle(el);
+    return { color: style.borderColor, style: style.borderStyle, width: style.borderWidth };
+  });
+  expect(border.color).toBe('rgb(253, 101, 0)');
+  expect(border.style).toBe('solid');
+  expect(border.width).toBe('1px');
+});
+
 test('чекбокс автопрокрутки синхронизирован с состоянием', async () => {
   const { page } = launched;
   await openMenu();
@@ -222,6 +233,8 @@ test('меню: тогл «Невидимо в трансляции» выклю
   const off = await mainState(app);
   expect(off.captureProtection).toBe(false);
   expect(off.contentProtection).toBe(false);
+  // Предупреждение ровно одно: канал main-notify, без дубля из renderer-диффа.
+  await expect(page.locator('.toast', { hasText: 'трансляции' })).toHaveCount(1);
   await expect(page.locator('.toast').last()).toContainText('видно в трансляции');
 
   await openMenu();
@@ -230,6 +243,7 @@ test('меню: тогл «Невидимо в трансляции» выклю
   const on = await mainState(app);
   expect(on.captureProtection).toBe(true);
   expect(on.contentProtection).toBe(true);
+  await expect(page.locator('.toast', { hasText: 'трансляции' })).toHaveCount(2);
 });
 
 test('клик-сквозь из меню выключается хоткеем — мышь снова работает', async () => {

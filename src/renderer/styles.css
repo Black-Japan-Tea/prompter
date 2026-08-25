@@ -90,7 +90,7 @@ body.autoscroll-on .bar:hover { opacity: 1; }
 
 .controls { display: flex; gap: 4px; -webkit-app-region: no-drag; }
 
-.btn-menu {
+.btn.btn-menu {
   width: 30px;
   height: 26px;
   display: inline-flex;
@@ -98,6 +98,10 @@ body.autoscroll-on .bar:hover { opacity: 1; }
   justify-content: center;
   color: var(--muted);
   opacity: 0.85;
+  /* Постоянная фирменная окантовка: меню — главная кнопка приложения.
+     Специфичность .btn.btn-menu нужна, чтобы перебить border:0 у .btn. */
+  border: 1px solid var(--accent);
+  border-radius: 6px;
 }
 
 .btn-menu:hover, .btn-menu:focus-visible, .btn-menu[aria-expanded='true'] {

@@ -245,9 +245,13 @@ export class PrompterApp implements AppCommandTarget {
     this.window.setContentProtectionEnabled(next);
     this.tray.refresh();
     this.broadcast();
-    if (!next) {
-      this.notify('error', 'ВНИМАНИЕ: окно снова видно в трансляции экрана');
-    }
+    // Единственный источник предупреждений о трансляции — здесь, в main.
+    this.notify(
+      next ? 'info' : 'error',
+      next
+        ? 'Окно снова невидимо в трансляции'
+        : 'ВНИМАНИЕ: окно снова видно в трансляции экрана',
+    );
   }
 
   // ── Диагностика и тест-хуки ────────────────────────────────────

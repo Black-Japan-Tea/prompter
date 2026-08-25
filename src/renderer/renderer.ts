@@ -228,15 +228,8 @@ function announceChanges(state: BroadcastState): void {
         : 'Клик-сквозь: выкл',
     );
   }
-  if (state.captureProtection !== previous.captureProtection) {
-    // Предупреждение дублируем тостом: выключенная защита — риск засветить конспект.
-    toasts.show(
-      state.captureProtection
-        ? 'Окно снова невидимо в трансляции'
-        : 'ВНИМАНИЕ: окно видно в трансляции экрана',
-      state.captureProtection ? 'info' : 'error',
-    );
-  }
+  // Про видимость в трансляции тостит только main (toggleCaptureProtection):
+  // дублирование из renderer-диффа давало два предупреждения подряд.
   if (state.alwaysOnTop !== previous.alwaysOnTop) {
     toasts.show(state.alwaysOnTop ? 'Поверх всех окон: вкл' : 'Поверх всех окон: выкл');
   }
